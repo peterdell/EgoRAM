@@ -37,6 +37,7 @@ S5      1   gpio 25
 #include "hardware/structs/systick.h"
 #include "hardware/vreg.h"
 #include "cvideo.h"
+#include "atari_cart.h"
 
 PIO pio = pio0;
 char c;
@@ -89,8 +90,8 @@ int main()
     sleep_ms(2000);
     printf("\033[2J\033[Hpico-pal starting...\n");
 
-    set_blitwidth(80);
-    set_blitheight(200);
+    set_blitwidth(40);
+    set_blitheight(192);
 
     for (int i = 0; i < MAX_SPRITES; i++)
     {
@@ -108,7 +109,7 @@ int main()
     }
     sp_cnt = MAX_SPRITES;
 
-    initialise_cvideo(pio);
+    // initialise_cvideo(pio);
 
     for (int i = 0; i < PAL_WIDTH * PAL_HEIGHT; i++)
     {
@@ -117,6 +118,8 @@ int main()
 
     sprite_draw_all();
     multicore_launch_core1(core1_main);
+
+    atari_cart_main();
 
     while (true)
     {

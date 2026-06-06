@@ -15,7 +15,7 @@ endif()
 set(PICO_BOARD pico CACHE STRING "Board type")
 
 #
-# Title:	        pico-pal Makefile
+# Title:	        EgoRAM Makefile
 # Description:		Makefile 
 # Author:	        Dean Belfield
 # Created:	        31/01/2021
@@ -33,21 +33,22 @@ set(PICO_BOARD pico CACHE STRING "Board type")
 
 cmake_minimum_required(VERSION 3.13)
 include(pico_sdk_import.cmake)
-project(pico-pal C CXX)
+project(EgoRAM C CXX)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 
 pico_sdk_init()
 
-add_executable( pico-pal 
-                pico-pal.c 
+add_executable( EgoRAM 
+                EgoRAM.c 
                 cvideo.c
+                atari_cart.c
 		)
 
-#target_compile_options(pico-pal PRIVATE -save-temps=obj -g)
+#target_compile_options(EgoRAM PRIVATE -save-temps=obj -g)
 
 target_link_libraries(
-        pico-pal PRIVATE
+        EgoRAM PRIVATE
         pico_stdlib
         pico_multicore
         pico_rand
@@ -58,13 +59,13 @@ target_link_libraries(
         pico_runtime
 )
 
-pico_enable_stdio_uart(pico-pal 0)   # UART als stdio
-pico_enable_stdio_usb(pico-pal 1)    # USB Serial deaktivieren
+pico_enable_stdio_uart(EgoRAM 0)   # UART als stdio
+pico_enable_stdio_usb(EgoRAM 1)    # USB Serial deaktivieren
 
-pico_add_extra_outputs(pico-pal)
+pico_add_extra_outputs(EgoRAM)
 
-pico_generate_pio_header(pico-pal ${CMAKE_CURRENT_LIST_DIR}/cvideo_sync.pio)
-pico_generate_pio_header(pico-pal ${CMAKE_CURRENT_LIST_DIR}/clock.pio)
+pico_generate_pio_header(EgoRAM ${CMAKE_CURRENT_LIST_DIR}/cvideo_sync.pio)
+pico_generate_pio_header(EgoRAM ${CMAKE_CURRENT_LIST_DIR}/clock.pio)
 
 add_custom_command(
         OUTPUT ${CMAKE_CURRENT_LIST_DIR}/generated/cvideo_sync.pio.h

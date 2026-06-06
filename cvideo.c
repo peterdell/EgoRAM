@@ -56,7 +56,7 @@ static uint8_t __attribute__((aligned(4))) vsync[BYTESPERLINE];
 static uint8_t __attribute__((aligned(4))) black[BYTESPERLINE];
 static uint8_t __attribute__((aligned(4))) line0[BYTESPERLINE];
 static uint8_t __attribute__((aligned(4))) line1[BYTESPERLINE];
-static uint8_t __attribute__((aligned(4))) video_ram[PAL_WIDTH * PAL_HEIGHT * 8];
+uint8_t __attribute__((aligned(4))) video_ram[PAL_WIDTH * PAL_HEIGHT * 8];
 static uint8_t __attribute__((aligned(4))) color_ram[PAL_WIDTH * PAL_HEIGHT];
 
 static uint8_t *pline0 = line0;
