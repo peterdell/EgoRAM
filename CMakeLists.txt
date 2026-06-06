@@ -41,8 +41,8 @@ pico_sdk_init()
 
 add_executable( EgoRAM 
                 EgoRAM.c 
-                cvideo.c
                 atari_cart.c
+                cvideo.c
 		)
 
 #target_compile_options(EgoRAM PRIVATE -save-temps=obj -g)

@@ -30,12 +30,7 @@
 #include "pico/stdlib.h"
 #include "hardware/sync.h"
 #include "hardware/clocks.h"
-
-#define PAL_WIDTH 80 // define 80 columns by 25 rows
-#define PAL_HEIGHT 25
-
-// #include "ff.h"
-// #include "fatfs_disk.h"
+#include "EgoRAM.h"
 
 #define ALL_GPIO_MASK 0x3FFFFFFF
 #define ADDR_GPIO_MASK 0x00001FFF
@@ -62,8 +57,11 @@
 // #include "rom.h"
 // #include "osrom.h"
 
-unsigned char cart_ram[1 * 1024];
-unsigned char cart_d5xx[256] = {0};
+static unsigned char cart_ram[128 * 1024];
+static unsigned char cart_d5xx[256] = {0};
+// static uint8_t d5xx_addr;
+// static uint8_t d5xx_data;
+
 char errorBuf[40];
 
 #define CART_CMD_OPEN_ITEM 0x00
@@ -120,7 +118,26 @@ char errorBuf[40];
 #define CART_TYPE_ATR 254
 #define CART_TYPE_XEX 255
 
-extern uint8_t __attribute__((aligned(4))) video_ram[PAL_WIDTH * PAL_HEIGHT * 8];
+/*
+uint8_t get_d5xx_addr()
+{
+	return d5xx_addr;
+}
+
+uint8_t get_d5xx_data()
+{
+	return d5xx_data;
+}
+*/
+unsigned char *__not_in_flash_func(get_cart_d5xx)()
+{
+	return cart_d5xx;
+}
+
+unsigned char *__not_in_flash_func(get_cart_ram)()
+{
+	return cart_ram;
+}
 
 void __not_in_flash_func(emulate_standard_8k)()
 {
@@ -153,11 +170,12 @@ void __not_in_flash_func(emulate_roland)()
 	RD5_HIGH;
 
 	bool rd5_high = true;
+
 	uint32_t last;
 	uint8_t data;
-
 	uint32_t pins;
 	uint16_t addr;
+
 	while (1)
 	{
 		// wait for phi2 high
@@ -168,20 +186,37 @@ void __not_in_flash_func(emulate_roland)()
 		{ // s5 low
 			SET_DATA_MODE_OUT;
 			addr = pins & ADDR_GPIO_MASK;
-			gpio_put_masked(DATA_GPIO_MASK, ((uint32_t)video_ram[addr]) << 13);
+			gpio_put_masked(DATA_GPIO_MASK, ((uint32_t)cart_ram[addr]) << 13);
 			// wait for phi2 low
 			while (gpio_get_all() & PHI2_GPIO_MASK)
 				;
 			SET_DATA_MODE_IN;
 		}
-		else if (!(pins & CCTL_RW_GPIO_MASK))
-		{ // CCTL low + write
-			last = pins;
-			// read data bus on falling edge of phi2
-			while ((pins = gpio_get_all()) & PHI2_GPIO_MASK)
+		else if (!(pins & CCTL_GPIO_MASK))
+		{
+			addr = pins & 0xff;
+
+			// CCTL low + write
+			if (!(pins & RW_GPIO_MASK))
+			{
 				last = pins;
-			data = (last & DATA_GPIO_MASK) >> 13;
-			multicore_fifo_push_blocking(42);
+				// read data bus on falling edge of phi2
+				while ((pins = gpio_get_all()) & PHI2_GPIO_MASK)
+					last = pins;
+				data = (last & DATA_GPIO_MASK) >> 13;
+
+				write_d5xx(addr, data);
+			}
+			else
+			{
+				// CCTL low + read
+				SET_DATA_MODE_OUT;
+				gpio_put_masked(DATA_GPIO_MASK, ((uint32_t)cart_d5xx[addr]) << 13);
+				// wait for phi2 low
+				while (gpio_get_all() & PHI2_GPIO_MASK)
+					;
+				SET_DATA_MODE_IN;
+			}
 		}
 	}
 }
@@ -1280,9 +1315,6 @@ void emulate_cartridge(int cartType)
 
 void __not_in_flash_func(atari_cart_main)()
 {
-	gpio_init(ATARI_PHI2_PIN);
-	gpio_set_dir(ATARI_PHI2_PIN, GPIO_IN);
-
 	gpio_init_mask(ALL_GPIO_MASK);
 
 	gpio_set_dir_in_masked(ADDR_GPIO_MASK | DATA_GPIO_MASK | CCTL_GPIO_MASK | PHI2_GPIO_MASK | RW_GPIO_MASK | S4_GPIO_MASK | S5_GPIO_MASK);

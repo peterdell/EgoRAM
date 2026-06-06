@@ -34,7 +34,10 @@
 #include "cvideo.h"
 #include "cvideo_sync.pio.h" // The assembled PIO code
 #include "clock.pio.h"       // The assembled PIO code
-#include "vt100_font_8x8.h"
+#include "atari_cart.h"
+#include "EgoRAM.h"
+
+// #include "vt100_font_8x8.h"
 
 // PIO pio_0;                      // The PIO that this uses
 static uint offset_0; // Program offsets
@@ -47,8 +50,7 @@ static uint bline;         // Line in the bitmap to fetch
 static uint vblank_count; // Vblank counter
 static bool cursor_onoff = true;
 static int cursor_frame_cnt = 0;
-static int blitwidth;
-static int blitheight;
+static uint8_t *video_ram;
 
 static uint8_t __attribute__((aligned(4))) hsync[BYTESPERLINE];
 static uint8_t __attribute__((aligned(4))) border[BYTESPERLINE];
@@ -56,14 +58,13 @@ static uint8_t __attribute__((aligned(4))) vsync[BYTESPERLINE];
 static uint8_t __attribute__((aligned(4))) black[BYTESPERLINE];
 static uint8_t __attribute__((aligned(4))) line0[BYTESPERLINE];
 static uint8_t __attribute__((aligned(4))) line1[BYTESPERLINE];
-uint8_t __attribute__((aligned(4))) video_ram[PAL_WIDTH * PAL_HEIGHT * 8];
 static uint8_t __attribute__((aligned(4))) color_ram[PAL_WIDTH * PAL_HEIGHT];
 
 static uint8_t *pline0 = line0;
 static uint8_t *pline1 = line1;
 static int pal_mode = true;
 static int graphics_mode = false;
-static uint8_t *uint8_tset = (uint8_t *)vt100_font_8x8;
+// static uint8_t *uint8_tset = (uint8_t *)vt100_font_8x8;
 static double divisor_clock;
 static double divisor_cvideo;
 static PIO glb_pio;
@@ -100,7 +101,7 @@ static void generate_synclines()
     memset(&hsync[HSYNCSTART], SYNC, HSYNCLEN);
 
     memcpy(border, hsync, sizeof(border));
-    memset(&border[DATASTART - GREY_OFFSET], GREY, 160 + 2 * GREY_OFFSET);
+    // memset(&border[DATASTART - GREY_OFFSET], GREY, get_blitwidth() * 2 + 2 * GREY_OFFSET);
 
     memset(vsync, SYNC, sizeof(vsync));
     // memset(&vsync[BYTESPERLINE - 1 - HSYNCLEN], BLACK, HSYNCLEN);
@@ -212,6 +213,8 @@ void initialise_cvideo(PIO pio)
 
     printf("Composite-Video initialising... \n");
 
+    video_ram = get_cart_ram();
+
     systick_init();
 
     setPalNtscMode(PAL);
@@ -279,6 +282,7 @@ void initialise_cvideo(PIO pio)
 
     printf("color_clock: %f\n", get_sm_frequency(pio, sm_clock) / 2.0f);
     printf("pixel_clock: %f\n", get_sm_frequency(pio, sm_sync));
+    printf("video_ram at %p\n", video_ram);
 
     // Start the PIO state machines
     //
@@ -289,53 +293,12 @@ void initialise_cvideo(PIO pio)
 
     pio_enable_sm_mask_in_sync(pio0, sm_maske);
 
-    memset(video_ram, 0, PAL_WIDTH * PAL_HEIGHT);
-    strcpy(video_ram, "pico-pal (c) by R. Scholz");
+    // memset(video_ram, 0, PAL_WIDTH * PAL_HEIGHT);
+    // strcpy(video_ram, "pico-pal (c) by R. Scholz");
 
     printf("Composite-Video enabled \n");
     // uint32_t status = save_and_disable_interrupts();
     // irq_set_enabled(USBCTRL_IRQ, false);
-}
-
-extern sprite_t *sp_array[MAX_SPRITES];
-extern int dx_array[MAX_SPRITES];
-extern int dy_array[MAX_SPRITES];
-
-void __not_in_flash("jiffy_callback") jiffy_callback(void)
-{
-    int xpos, ypos;
-    sprite_t *sp;
-    uint32_t ticks;
-
-    ticks = systick_hw->cvr;
-
-    for (int i = 0; i < MAX_SPRITES; i++)
-    {
-        sp = sp_array[i];
-
-        sprite_draw(sp);
-
-        xpos = sp->xpos;
-        ypos = sp->ypos;
-
-        xpos += dx_array[i];
-        if (xpos >= PAL_WIDTH << 3 || xpos <= 0)
-        {
-            dx_array[i] *= -1;
-            xpos += dx_array[i];
-        }
-
-        ypos += dy_array[i];
-        if (ypos >= PAL_HEIGHT << 3 || ypos <= 0)
-        {
-            dy_array[i] *= -1;
-            ypos += dy_array[i];
-        }
-
-        sprite_draw_xy(sp, xpos, ypos);
-    }
-
-    // printf("ticks: %d\n", (ticks - systick_hw->cvr) & 0xffffff);
 }
 
 // The DMA interrupt handler
@@ -455,9 +418,9 @@ static void __not_in_flash("cvideo_dma_handler") cvideo_dma_handler(void)
         vline = 1; // Reset the scanline counter
         vblank_count++;
 
-        cursor_frame_cnt++;
+        // multicore_fifo_push_blocking(42);
 
-        multicore_fifo_push_blocking(42);
+        cursor_frame_cnt++;
 
         if (cursor_frame_cnt >= CURSOR_TIME)
         {
@@ -511,11 +474,6 @@ void setGraphicsMode(int mode)
     printf("Graphics mode set to mode: %d\n", mode);
 }
 
-uint8_t *getVideoRam()
-{
-    return video_ram;
-}
-
 static float pio_sm_get_frequency(PIO pio, uint sm)
 {
     uint32_t div_reg = pio->sm[sm].clkdiv;
@@ -547,133 +505,4 @@ void change_divisior(int d)
 
     // set_sys_clock_pll(1064068560 + shifter, 3, 2);
     printf("color_clock: %f\n", pio_sm_get_frequency(pio0, sm_clock));
-}
-
-void putChar(int xpos, int ypos, uint8_t c)
-{
-    uint8_t *pscreen = &video_ram[(ypos * PAL_WIDTH * 8) + xpos];
-    uint8_t *puint8_t = &uint8_tset[c << 3];
-
-    for (int i = 0; i < 8; i++)
-    {
-        *pscreen = *puint8_t;
-        puint8_t++;
-        pscreen += PAL_WIDTH;
-    }
-}
-
-sprite_t *sprite_new(uint8_t width, uint8_t height)
-{
-    sprite_t *sp;
-
-    sp = malloc(sizeof(sprite_t));
-    sp->width = width;
-    sp->height = height;
-    sp->data = malloc(width * height);
-    memset(sp->data, 0xff, width * height);
-
-    if (sp == NULL || sp->data == NULL)
-    {
-        printf("sprite_new failed!\n");
-    }
-
-    return sp;
-}
-
-void sprite_free(sprite_t *sp)
-{
-    if (sp)
-    {
-        free(sp->data);
-        free(sp);
-    }
-}
-
-void __not_in_flash("sprite_draw_all") sprite_draw_all()
-{
-    for (int i = 0; i < MAX_SPRITES; i++)
-    {
-        // printf("%d %p\n", i, sp_array[i]);
-        sprite_draw(sp_array[i]);
-    }
-}
-
-void __not_in_flash("sprite_draw") sprite_draw(sprite_t *sp)
-{
-    if (sp != NULL)
-    {
-        // printf("sprite_draw: %p x:%d y:%d \n", sp, (int)sp->xpos, (int)sp->ypos);
-        sprite_draw_xy(sp, sp->xpos, sp->ypos);
-    }
-}
-
-void __not_in_flash("sprite_draw_xy") sprite_draw_xy(sprite_t *sp, uint16_t xpos, uint16_t ypos)
-{
-    int bytex = (xpos >> 3) - sp->width;
-    int pixx = xpos & 0x07;
-
-    int ystart;
-    int vstart;
-    int ylen;
-    int vdiff;
-    int x, y;
-
-    uint8_t *vpos;
-    uint8_t *sppos;
-    char c;
-
-    // printf("sprite_draw_xy: %p x:%d y:%d \n", sp, sp->xpos, sp->ypos);
-
-    if (xpos < 0 || ypos < 0)
-        return;
-
-    sp->xpos = xpos;
-    sp->ypos = ypos;
-
-    ystart = sp->height - ypos;
-    if (ystart < 0)
-        ystart = 0;
-
-    ylen = sp->height - ystart;
-
-    vstart = ypos - sp->height;
-    if (vstart < 0)
-        vstart = 0;
-
-    vdiff = blitheight + sp->height - ypos;
-    if (vdiff < sp->height)
-    {
-        ylen = vdiff;
-    }
-
-    vpos = &video_ram[vstart * blitwidth];
-    sppos = &sp->data[ystart * sp->width];
-
-    // printf("sprite xpos:%d ypos:%d bytex: %d pixx:%d ystart:%d ylen:%d\n", xpos, ypos, bytex, pixx, ystart, ylen);
-
-    for (y = 0; y < ylen; y++)
-    {
-        c = 0;
-        for (x = 0; x < sp->width; x++)
-        {
-            if (bytex + x >= 0 && bytex + x < blitwidth)
-                vpos[bytex + x] ^= (c | (sppos[x] >> pixx));
-            c = (sppos[x]) << (8 - pixx);
-        }
-        if (bytex + x >= 0 && bytex + x < blitwidth)
-            vpos[bytex + x] ^= c;
-
-        vpos += blitwidth;
-        sppos += sp->width;
-    }
-}
-
-void set_blitwidth(int w)
-{
-    blitwidth = w;
-}
-
-void set_blitheight(int h)
-{
-    blitheight = h;
 }
