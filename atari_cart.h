@@ -18,8 +18,9 @@
 #define ATARI_PHI2_PIN 22 // used on boot to check if we are plugged into an atari or usb
 
 void atari_cart_main();
-unsigned char *get_cart_d5xx();
-unsigned char *get_cart_ram();
+volatile unsigned char *get_cart_d5xx();
+volatile unsigned char *get_cart_ram();
+void set_writeable(bool);
 // uint8_t get_d5xx_addr();
 // uint8_t get_d5xx_data();
 

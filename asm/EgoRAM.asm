@@ -1,4 +1,12 @@
+ego_cmd		= $d500
+ego_stat	= $d501
+ego_data	= $f502 
 
+EGO_CMD_RENDER_SPRITES 		= 0
+EGO_CMD_START_SPRITE_DATA	= 1
+EGO_CMD_SET_WRITEABLE		= 2
+EGO_CMD_SET_READONLY		= 3
+EGO_CMD_ABORT			= 4
 
 	org $2000
 
@@ -16,12 +24,21 @@ size_4k=sm_width*lines_4k
 	mva #$34 708
 	mva #$78 709
 	mva #$cc 710
+	
+	mva #EGO_CMD_SET_WRITEABLE ego_cmd
+	
+	ldx #0
+fill	txa
+	sta $a000,x
+	inx
+	bpl fill
+	
 loop
 	lda cnt
 wait	cmp cnt
 	beq wait
 ;	sta $d01a
-	sta $d500
+	mva #EGO_CMD_RENDER_SPRITES ego_cmd
 
 	jmp loop
 

@@ -30,6 +30,7 @@ S5      1   gpio 25
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
 #include "pico/stdlib.h"
 #include "pico/multicore.h"
 #include "pico/rand.h"
@@ -38,8 +39,9 @@ S5      1   gpio 25
 #include "hardware/pll.h"
 #include "hardware/structs/systick.h"
 #include "hardware/vreg.h"
-#include "atari_cart.h"
+
 #include "vt100_font_8x8.h"
+#include "atari_cart.h"
 #include "EgoRAM.h"
 #include "cvideo.h"
 
@@ -48,17 +50,22 @@ int posx, posy;
 char *vram;
 
 sprite_t *sp0;
-sprite_t *sp_array[MAX_SPRITES];
-int dx_array[MAX_SPRITES];
-int dy_array[MAX_SPRITES];
+sprite_t *sp_array[EGO_MAX_SPRITES];
+int dx_array[EGO_MAX_SPRITES];
+int dy_array[EGO_MAX_SPRITES];
 int sp_cnt;
+
+static char strbuf[80];
 
 static uint8_t *char_font = (uint8_t *)vt100_font_8x8;
 static int blitwidth;
 static int blitheight;
+static uint32_t mode;
+
 static volatile uint8_t *video_ram;
 static volatile uint8_t *cart_d5xx;
 static volatile uint32_t ticks;
+static int uart_init_once;
 
 static PIO pio = pio0;
 
@@ -101,7 +108,7 @@ sprite_t *sprite_new(uint8_t width, uint8_t height)
 
     if (sp == NULL || sp->data == NULL)
     {
-        printf("sprite_new failed!\n");
+        ego_log("sprite_new failed!\n");
     }
 
     return sp;
@@ -118,9 +125,9 @@ void sprite_free(sprite_t *sp)
 
 void __not_in_flash("sprite_draw_all") sprite_draw_all()
 {
-    for (int i = 0; i < MAX_SPRITES; i++)
+    for (int i = 0; i < EGO_MAX_SPRITES; i++)
     {
-        // printf("%d %p\n", i, sp_array[i]);
+        // ego_log("%d %p\n", i, sp_array[i]);
         sprite_draw(sp_array[i]);
     }
 }
@@ -129,7 +136,7 @@ void __not_in_flash("sprite_draw") sprite_draw(sprite_t *sp)
 {
     if (sp != NULL)
     {
-        // printf("sprite_draw: %p x:%d y:%d \n", sp, (int)sp->xpos, (int)sp->ypos);
+        // ego_log("sprite_draw: %p x:%d y:%d \n", sp, (int)sp->xpos, (int)sp->ypos);
         sprite_draw_xy(sp, sp->xpos, sp->ypos);
     }
 }
@@ -149,7 +156,7 @@ void __not_in_flash("sprite_draw_xy") sprite_draw_xy(sprite_t *sp, uint16_t xpos
     uint8_t *sppos;
     char c;
 
-    // printf("sprite_draw_xy: %p x:%d y:%d \n", sp, sp->xpos, sp->ypos);
+    // ego_log("sprite_draw_xy: %p x:%d y:%d \n", sp, sp->xpos, sp->ypos);
 
     if (xpos < 0 || ypos < 0)
         return;
@@ -176,7 +183,7 @@ void __not_in_flash("sprite_draw_xy") sprite_draw_xy(sprite_t *sp, uint16_t xpos
     vpos = &video_ram[vstart * blitwidth];
     sppos = &sp->data[ystart * sp->width];
 
-    // printf("sprite xpos:%d ypos:%d bytex: %d pixx:%d ystart:%d ylen:%d\n", xpos, ypos, bytex, pixx, ystart, ylen);
+    // ego_log("sprite xpos:%d ypos:%d bytex: %d pixx:%d ystart:%d ylen:%d\n", xpos, ypos, bytex, pixx, ystart, ylen);
 
     for (y = 0; y < ylen; y++)
     {
@@ -203,7 +210,7 @@ void __not_in_flash_func(renderer_callback)(void)
     // uint8_t d5xx_addr = get_d5xx_addr();
     // uint8_t d5xx_data = get_d5xx_data();
 
-    for (int i = 0; i < MAX_SPRITES; i++)
+    for (int i = 0; i < EGO_MAX_SPRITES; i++)
     {
         sp = sp_array[i];
 
@@ -229,23 +236,72 @@ void __not_in_flash_func(renderer_callback)(void)
         sprite_draw_xy(sp, xpos, ypos);
     }
 
-    // printf("ticks: %d\n", (ticks - systick_hw->cvr) & 0xffffff);
+    // ego_log("ticks: %d\n", (ticks - systick_hw->cvr) & 0xffffff);
+}
+
+void do_data(uint8_t data)
+{
+}
+
+void do_command(uint8_t data)
+{
+    switch (data)
+    {
+    case EGO_CMD_RENDER_SPRITES:
+        renderer_callback();
+        break;
+    case EGO_CMD_START_SPRITE_DATA:
+        break;
+    case EGO_CMD_SET_WRITEABLE:
+        set_writeable(true);
+        cart_d5xx[EGO_REG_STATUS] |= 0x01;
+        break;
+    case EGO_CMD_SET_READONLY:
+        set_writeable(false);
+        cart_d5xx[EGO_REG_STATUS] &= ~0x01;
+        break;
+    case EGO_CMD_ABORT:
+        break;
+    default:
+        break;
+    }
 }
 
 void __not_in_flash("core1_main") core1_main()
 {
-    printf("core1 started...\n");
+    uint32_t msg;
+    uint32_t data;
+    uint32_t addr;
+
     systick_init();
+
+    ego_log("core1 started...\n");
 
     while (true)
     {
-        multicore_fifo_pop_blocking();
+        msg = multicore_fifo_pop_blocking();
 
         ticks = systick_hw->cvr;
-        renderer_callback();
+
+        addr = msg & 0xff;
+        data = msg >> 16;
+
+        switch (addr)
+        {
+        case EGO_REG_CMD:
+            do_command(data);
+            break;
+        case EGO_REG_DATA:
+            do_data(data);
+            break;
+        default:
+            break;
+        }
+
         ticks = (ticks - systick_hw->cvr) & 0xffffff;
 
         cart_d5xx[0] &= ~0x80;
+        ego_log("addr: %04X, data: %02X, ticks: %d\n", msg & 0xffff, msg >> 16, ticks);
     }
 }
 
@@ -270,46 +326,89 @@ uint8_t read_d5xx(uint8_t addr)
 void write_d5xx(uint8_t addr, uint8_t data)
 {
 
-    cart_d5xx[addr] = data;
-    cart_d5xx[0] |= 0x80;
+    cart_d5xx[EGO_REG_STATUS] |= 0x80;
 
-    switch (addr)
+    uint32_t msg = data << 16 | addr;
+    multicore_fifo_push_blocking(msg);
+}
+
+void ego_log(const char *format, ...)
+{
+
+    va_list args;
+
+    va_start(args, format);
+    vsnprintf(strbuf, sizeof(strbuf), format, args);
+    va_end(args);
+
+    if (mode == EGO_MODE_USB)
     {
-    case 0x00:
-        multicore_fifo_push_blocking(42);
-        break;
-    default:
-        break;
+        while (!stdio_usb_connected())
+        {
+            sleep_ms(100);
+        }
+
+        printf("%s", strbuf);
+    }
+    else
+    {
+        if (uart_init_once == 0)
+        {
+            uart_init_once = 1;
+            uart_init(EGO_UART_ID, EGO_BAUD_RATE);
+            gpio_set_function(EGO_UART_TX_PIN, GPIO_FUNC_UART);
+            gpio_set_function(EGO_UART_RX_PIN, GPIO_FUNC_UART);
+            // uart_puts(EGO_UART_ID, "UART0 initialised at GPIO 28!\n");
+        }
+        uart_puts(EGO_UART_ID, strbuf);
     }
 }
 
 int main()
 {
-    int first = true;
-
     vreg_set_voltage(VREG_VOLTAGE_1_20);
     sleep_ms(100);
-
     set_sys_clock_khz(250000, true);
-
     sleep_ms(100);
-
     systick_init();
+
     stdio_init_all();
 
-    sleep_ms(2000);
-    printf("\033[2J\033[EgoRAM starting...\n");
+    // check to see if we are plugged into Atari 8-bit
+    // by checking for high on PHI2 gpio for xxx ms
+    gpio_init(ATARI_PHI2_PIN);
+    gpio_set_dir(ATARI_PHI2_PIN, GPIO_IN);
+
+    uart_init_once = 0;
+    mode = EGO_MODE_USB;
+
+    while (to_ms_since_boot(get_absolute_time()) < 300)
+    {
+        if (gpio_get(ATARI_PHI2_PIN))
+        {
+            mode = EGO_MODE_ATARI;
+        }
+    }
 
     video_ram = get_cart_ram();
     cart_d5xx = get_cart_d5xx();
 
-    printf("video_ram at %p\n", video_ram);
-    printf("cart_d5xx at %p\n", cart_d5xx);
+    memset((void *)video_ram, 0xaa, 8 * 1024);
+
+    ego_log("\033[2J\033[HEgoRAM starting...\n");
+    if (mode == EGO_MODE_USB)
+        ego_log("mode: USB\n");
+    else
+        ego_log("mode: ATARI\n");
+
+    ego_log("sys_clock: %d\n", clock_get_hz(clk_sys));
+    ego_log("video_ram at %p\n", video_ram);
+    ego_log("cart_d5xx at %p\n", cart_d5xx);
 
     set_blitwidth(40);
     set_blitheight(200);
 
-    for (int i = 0; i < MAX_SPRITES; i++)
+    for (int i = 0; i < EGO_MAX_SPRITES; i++)
     {
         sp_array[i] = sprite_new(3, 16);
         sp_array[i]->xpos = get_rand_32() % 639;
@@ -323,39 +422,31 @@ int main()
         if (get_rand_32() & 0x01)
             dy_array[i] *= -1;
     }
-    sp_cnt = MAX_SPRITES;
+    sp_cnt = EGO_MAX_SPRITES;
 
     for (int i = 0; i < PAL_WIDTH * PAL_HEIGHT; i++)
     {
         putChar(i % PAL_WIDTH, i / PAL_WIDTH, i);
     }
 
-    sprite_draw_all();
+    // sprite_draw_all();
+
     multicore_launch_core1(core1_main);
 
-    // check to see if we are plugged into Atari 8-bit
-    // by checking for high on PHI2 gpio for 100ms
-    gpio_init(ATARI_PHI2_PIN);
-    gpio_set_dir(ATARI_PHI2_PIN, GPIO_IN);
-    while (to_ms_since_boot(get_absolute_time()) < 100)
+    if (mode == EGO_MODE_ATARI)
     {
-        if (gpio_get(ATARI_PHI2_PIN))
-            atari_cart_main();
+        atari_cart_main();
     }
 
-    printf("EgoRAM USB mode... ");
-    initialise_cvideo(pio);
+    initialise_cvideo(pio0);
 
     while (true)
     {
         c = getchar();
-        printf("%c", c);
 
         write_d5xx(0x00, 0x00);
 
         while (read_d5xx(0) & 0x80)
             ;
-
-        printf("ticks: %d\n", ticks);
     }
 }

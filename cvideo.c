@@ -50,7 +50,7 @@ static uint bline;         // Line in the bitmap to fetch
 static uint vblank_count; // Vblank counter
 static bool cursor_onoff = true;
 static int cursor_frame_cnt = 0;
-static uint8_t *video_ram;
+static volatile uint8_t *video_ram;
 
 static uint8_t __attribute__((aligned(4))) hsync[BYTESPERLINE];
 static uint8_t __attribute__((aligned(4))) border[BYTESPERLINE];
@@ -114,7 +114,7 @@ static void __not_in_flash("generate_line") generate_line(uint8_t *buffer)
 {
     unsigned int screenline = bline >> 3;
     unsigned int uint8_tline = bline & 0x07;
-    uint8_t *pscreen;
+    volatile uint8_t *pscreen;
     uint8_t *pcolor;
     uint8_t c;
     uint8_t pix;
