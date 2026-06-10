@@ -211,14 +211,14 @@ void do_movement()
             ypos = sp->ypos;
 
             xpos += dx_array[i];
-            if (xpos >= ego_blitwidth << 3 || xpos <= 0)
+            if (xpos >= (ego_blitwidth - shape_array[sp->shape_no].width) << 3 || xpos <= 0)
             {
                 dx_array[i] *= -1;
                 xpos += dx_array[i];
             }
 
             ypos += dy_array[i];
-            if (ypos >= ego_blitheight || ypos <= 0)
+            if (ypos >= ego_blitheight || ypos - shape_array[sp->shape_no].height <= 0)
             {
                 dy_array[i] *= -1;
                 ypos += dy_array[i];
