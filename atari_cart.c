@@ -77,9 +77,6 @@ void __not_in_flash_func(emulate_roland)()
 	RD4_HIGH;
 	RD5_HIGH;
 
-	// bool rd5_high = true;
-
-	uint32_t last;
 	uint8_t data;
 	uint32_t pins;
 	uint16_t addr;
@@ -107,13 +104,11 @@ void __not_in_flash_func(emulate_roland)()
 		{
 			if (!(pins & RW_GPIO_MASK))
 			{
-
-				// write to cart or d5xx
-				last = pins;
+				// ATARI writes to datat bus
 				// read data bus on falling edge of phi2
 				while ((pins = gpio_get_all()) & PHI2_GPIO_MASK)
-					last = pins;
-				data = (last & DATA_GPIO_MASK) >> 13;
+					;
+				data = (pins & DATA_GPIO_MASK) >> 13;
 
 				if (ram_ptr == cart_d5xx)
 				{
@@ -128,8 +123,12 @@ void __not_in_flash_func(emulate_roland)()
 			{
 				// read
 				SET_DATA_MODE_OUT;
-				// addr = pins & ADDR_GPIO_MASK;
+				if (ram_ptr == cart_d5xx)
+				{
+					addr &= 0xff;
+				}
 				gpio_put_masked(DATA_GPIO_MASK, ((uint32_t)ram_ptr[addr]) << 13);
+
 				//  wait for phi2 low
 				while (gpio_get_all() & PHI2_GPIO_MASK)
 					;

@@ -105,12 +105,12 @@ void __not_in_flash_func(set_blitheight)(uint16_t height)
     ego_blitheight = height;
 }
 
-uint8_t read_vram(uint16_t addr)
+uint8_t __not_in_flash_func(read_vram)(uint16_t addr)
 {
     return video_ram[addr];
 }
 
-void write_vram(uint16_t addr, uint8_t data)
+void __not_in_flash_func(write_vram)(uint16_t addr, uint8_t data)
 {
     if (addr >= 0x1fff)
     {
@@ -510,8 +510,14 @@ void __not_in_flash_func(write_d5xx)(uint8_t addr, uint8_t data)
 
     cart_d5xx[EGO_REG_STATUS] |= 0x80;
 
-    uint32_t msg = data << 16 | addr;
-    multicore_fifo_push_blocking(msg);
+    if (multicore_fifo_wready)
+    {
+        multicore_fifo_push_blocking(addr | (data << 16));
+    }
+    else 
+    {
+        ego_log("write to FiFo failed\n");
+    }
 }
 
 void __not_in_flash_func(ego_log)(const char *format, ...)
