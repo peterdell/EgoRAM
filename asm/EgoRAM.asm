@@ -2,7 +2,9 @@ ptr			= 0
 
 COLBK			= $D01A
 
+DLIST			= $D402
 VCOUNT			= $D40B
+NMIEN			= $D40E
 
 EGO_REG_CMD		= $D500
 EGO_REG_STATUS		= $D501
@@ -45,11 +47,19 @@ lines_4k=102
 size_4k=sm_width*lines_4k
 	
 	.proc main
-	mwa #dl $230
-	
+
+	mwa #dl $230	
 	mva #14 708
 	mva #08 709
 	mva #00 710
+	
+	
+	ldx cnt
+	inx
+	inx
+
+waitvbi	cpx cnt
+	bne waitvbi 
 
 	lda #<sm
 	sta ptr
@@ -90,7 +100,7 @@ lineptr	lda ptr
 ;	
 	mva #EGO_CMD_SHAPE_DATA		EGO_REG_CMD
 	mva #$00			EGO_REG_DATA		;shape no
-	mva #03				EGO_REG_DATA		;shape x bytes
+	mva #3				EGO_REG_DATA		;shape x bytes
 	mva #21				EGO_REG_DATA		;shape y lines
 	
 	ldx #3*21
@@ -183,36 +193,51 @@ spriteshape
 render	lda #EGO_CMD_RENDER_SPRITES
 	jsr sendcmd
 
-
+	lda #0
+	sta NMIEN
 loop
-	;jmp loop
 	
-	lda cnt
-wait	cmp cnt
-	beq wait
-	
-	;inc 712
+waitvcnt2
+	lda VCOUNT
+	cmp #112
+;	cmp #20
+	bcc waitvcnt2
+
+waitvcnt
+;	lda VCOUNT
+;	cmp #8
+;	bcc waitvcnt
+
+	lda #$02
+	sta COLBK
 
 	lda #EGO_CMD_RENDER_SPRITES
 	jsr sendcmd
 
-	jsr domove
-	jsr checkmove
-	jsr setxy
-	
-waitvcnt
-	lda vcount
-	cmp #10
-	bcc waitvcnt
-	
-	lda #$0f
+	lda #$04
 	sta COLBK
+	jsr domove
+	
+	lda #$06
+	sta COLBK	
+	jsr checkmove
 
+	lda #$08
+	sta COLBK	
+	jsr setxy
+
+	lda #10
+	sta COLBK
 	lda #EGO_CMD_RENDER_SPRITES
 	jsr sendcmd
 
 	lda #$00
 	sta COLBK
+
+waitvcnt1
+	lda VCOUNT
+;	cmp #2
+	bmi waitvcnt1
 
 	jmp loop
 
@@ -266,7 +291,7 @@ checkmove1
 	sbc xinc+1,x
 	sta xinc+1,x
 	
-	;jsr addinc
+	
 
 checkmovey
 	
