@@ -418,7 +418,7 @@ static void __not_in_flash("cvideo_dma_handler") cvideo_dma_handler(void)
         vline = 1; // Reset the scanline counter
         vblank_count++;
 
-        write_d5xx(EGO_REG_CMD, EGO_CMD_MOVEMENT);
+        // write_d5xx(EGO_REG_CMD, EGO_CMD_MOVEMENT);
 
         cursor_frame_cnt++;
 

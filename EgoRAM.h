@@ -29,6 +29,8 @@
 #define EGO_CMD_SET_BLIT_WIDTH 13
 #define EGO_CMD_SET_BLIT_HEIGHT 14
 #define EGO_CMD_LINE_PTR 15
+#define EGO_CMD_FILL_MEM 16
+#define EGO_CMD_SPRITE_MODE 17
 #define EGO_CMD_MOVEMENT 99
 
 #define EGO_ST_IDLE 0
@@ -50,6 +52,15 @@
 #define EGO_ST_LINE_NO 16
 #define EGO_ST_LINE_DATA_LO 17
 #define EGO_ST_LINE_DATA_HI 18
+#define EGO_ST_FILL_MEM_LO 19
+#define EGO_ST_FILL_MEM_HI 20
+#define EGO_ST_FILL_LEN_LO 21
+#define EGO_ST_FILL_LEN_HI 22
+#define EGO_ST_FILL_BYTE 23
+#define EGO_ST_SPRITE_MODE 24
+
+#define EGO_MODE_XOR 0
+#define EGO_MODE_MASK 1
 
 /*
 Sprite data:
@@ -65,16 +76,18 @@ typedef struct
 	uint8_t height;
 	uint8_t bitsperpix;
 	uint8_t *data;
+	uint8_t *mask;
 } shape_t;
 
 typedef struct
 {
 	uint8_t enabled;
+	uint8_t mode;
 	uint16_t xpos;
 	uint16_t ypos;
+	uint8_t shape_no;
 	uint16_t xold;
 	uint16_t yold;
-	uint8_t shape_no;
 } sprite_t;
 
 void set_blitwidth(uint16_t width);
