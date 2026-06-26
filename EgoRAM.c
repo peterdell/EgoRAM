@@ -58,6 +58,7 @@ static uint8_t *char_font = (uint8_t *)vt100_font_8x8;
 static uint32_t mode;
 
 static volatile uint8_t *video_ram;
+static volatile uint8_t *char_ram;
 static volatile uint8_t *cart_d5xx;
 static volatile uint32_t ticks;
 static bool uart_init_once;
@@ -67,6 +68,7 @@ static uint32_t ego_state;
 static uint32_t ego_shape_no;
 static uint32_t ego_sprite_no;
 static uint32_t ego_line_no;
+static uint32_t ego_charset_no;
 static uint32_t ego_cnt;
 static uint8_t ego_shape_width;
 static uint16_t ego_shape_height;
@@ -78,6 +80,7 @@ static uint16_t ego_len;
 
 static shape_t shape_array[EGO_MAX_SHAPES];
 static sprite_t sprite_array[EGO_MAX_SPRITES];
+static uint8_t charset_array[2][2048];
 
 static PIO pio = pio0;
 
@@ -507,8 +510,44 @@ void __not_in_flash_func(do_data)(uint8_t data)
         sprite_array[ego_sprite_no].mode = data;
         ego_state = EGO_ST_IDLE;
         break;
+    case EGO_ST_CHARSET_NO:
+        ego_charset_no = data & 0x01;
+        ego_state = EGO_ST_CHARSET_DATA;
+        ego_cnt = 0;
+        break;
+    case EGO_ST_CHARSET_DATA:
+        charset_array[ego_charset_no][ego_cnt] = data;
+        ego_cnt++;
+        if (ego_cnt >= 2048)
+        {
+            ego_state = EGO_ST_IDLE;
+            ego_log("charset %d loaded\n", ego_charset_no);
+        }
+        break;
     default:
         break;
+    }
+}
+
+void __not_in_flash_func(char_to_video)()
+{
+    int i, x, y;
+    int ypos, vypos;
+    uint16_t c;
+
+    for (y = 0; y < 25; y++)
+    {
+        ypos = y * 40;
+        for (x = 0; x < 40; x++)
+        {
+            c = char_ram[ypos + x] << 3;
+
+            for (i = 0; i < 8; i++)
+            {
+                vypos = ego_line_ptr[(y << 3) + i];
+                video_ram[vypos + x] = charset_array[0][c + i];
+            }
+        }
     }
 }
 
@@ -571,6 +610,12 @@ void __not_in_flash_func(do_command)(uint8_t data)
         break;
     case EGO_CMD_SPRITE_MODE:
         ego_state = EGO_ST_SPRITE_NO;
+        break;
+    case EGO_CMD_CHARSET:
+        ego_state = EGO_ST_CHARSET_NO;
+        break;
+    case EGO_CMD_CHAR_TO_VIDEO:
+        char_to_video();
         break;
     case EGO_CMD_MOVEMENT:
         do_movement();
@@ -871,6 +916,7 @@ int main()
     }
 
     video_ram = get_cart_ram();
+    char_ram = video_ram + 0x3C00;
     cart_d5xx = get_cart_d5xx();
 
     // memset((void *)video_ram, 0x01, 4 * 1024);

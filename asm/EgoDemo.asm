@@ -15,6 +15,8 @@ RIGHT			= $07
 UP			= $0e
 DOWN			= $0f
 
+SCREEN			= $bc00
+
 
 	org $2000
 
@@ -111,6 +113,25 @@ shwait:		lda EGO_REG_STATUS
 		inx
 		cpx #128
 		bne shape0
+		
+;
+; upload charset
+;
+		mva #EGO_CMD_CHARSET		EGO_REG_CMD		;upload charset
+		mva #0				EGO_REG_DATA		;charset no 0 of 1
+		
+		ldx #8							;8 pages
+		ldy #0
+		mva #<surfaceCharset		ptr
+		mva #>surfaceCharset		ptr+1
+		
+charset_loop	lda (ptr),y
+		sta EGO_REG_DATA
+		iny
+		bne charset_loop
+		inc ptr+1
+		dex
+		bne charset_loop
 
 ;
 ; init X/Y pos and increments
@@ -216,15 +237,18 @@ render		mva #EGO_CMD_SET_WRITEABLE EGO_REG_CMD
 waitfill1	lda EGO_REG_STATUS
 		bmi waitfill1	
 		
-;		ldx #0
-;fillscr		txa
-;		sta sm,x
-;		inx
-;		bne fillscr
+		ldx #0
+fillscr		txa
+		sta SCREEN,x
+		inx
+		bne fillscr
 	
 		lda #EGO_CMD_RENDER_SPRITES
 		jsr sendcmd
 	
+		lda #EGO_CMD_CHAR_TO_VIDEO
+		jsr sendcmd
+
 		sei
 		lda #0
 		sta NMIEN
@@ -237,7 +261,7 @@ waitfill1	lda EGO_REG_STATUS
 		
 		
 		
-;loop		jmp loop
+; loop		jmp loop
 	
 ;------------------------------------------------------------
 ; main loop
@@ -254,19 +278,21 @@ waitvcnt	lda VCOUNT
 ;		dey
 ;		bne waitx
 
-		mva #EGO_CMD_FILL_MEM EGO_REG_CMD
-		lda #0
-		sta EGO_REG_DATA
-		sta EGO_REG_DATA
-		sta EGO_REG_DATA
-		lda #$1f
-		sta EGO_REG_DATA
-		lda #$00
-		sta EGO_REG_DATA	
-waitfill	lda EGO_REG_STATUS
-		bmi waitfill
+;		mva #EGO_CMD_FILL_MEM EGO_REG_CMD
+;		lda #0
+;		sta EGO_REG_DATA
+; 		sta EGO_REG_DATA
+;		sta EGO_REG_DATA
+;		lda #$1f
+;		sta EGO_REG_DATA
+;		lda #$00
+;		sta EGO_REG_DATA	
+;waitfill	lda EGO_REG_STATUS
+;		bmi waitfill
 
-
+		lda #EGO_CMD_CHAR_TO_VIDEO
+		jsr sendcmd
+		
 ;		lda KBCODE
 ;		cmp #UP
 ;		bne maindown
@@ -545,6 +571,8 @@ mantacnt	.byte 0
 mantajfy	.byte 8
 
 		icl "EgoDemo-Manta.asm"
+		icl "charset.asm"
+		icl "surface-charset.asm"
 	
 		.endp
 	
