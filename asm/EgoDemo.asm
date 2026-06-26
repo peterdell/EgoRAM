@@ -2,6 +2,8 @@
 	icl "System-Equates.asm"
 	icl "EgoRAM-Equates.asm"
 	
+	.use hardware
+	.use os_xl
 ptr			= 0
 
 WIDTH			= 40
