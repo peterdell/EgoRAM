@@ -25,6 +25,8 @@ eol		= $9b
 		icl "..\System-Equates.asm"
 		icl "..\EgoRAM-Equates.asm"
 		icl "EgoUridium-Constants.asm"
+
+		.use ego_gfx			;graphics is the default device for cmd.* references
 		
 ;------------------------------------------------------------
 ; upload all static data to EgoRam,
@@ -128,7 +130,7 @@ uploadSurfaceCharset
 uploadCharset	sta ptr
 		stx ptr+1
 		
-		lda #ego_gfx_cmd.CHARSET		
+		lda #cmd.CHARSET		
 		sta ego_reg.CMD				;upload charset
 		sty ego_reg.DATA			;charset no 0 of 1
 
@@ -197,7 +199,7 @@ uploadSprites1	txa
 ;------------------------------------------------------------		
 		.proc uploadSprite
 		ldy #0
-		lda #ego_gfx_cmd.SHAPE_DATA
+		lda #cmd.SHAPE_DATA
 		sta ego_reg.CMD
 		stx ego_reg.DATA				;shape no
 		lda #3		

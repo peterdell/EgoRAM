@@ -14,6 +14,8 @@
 	icl "..\EgoRAM-Equates.asm"
 	icl "EgoUridium-Constants.asm"
 
+	.use ego_gfx				;graphics is the default device for cmd.* references
+
 	.use hardware
 	.use os_xl
 	
@@ -21,7 +23,7 @@
 	.def EGO_RAM_PRESENT = 0
 	.endif
 
-dl_target = mathpack
+dl_target = $d800
 
 playerScore = $20
 indexCurrentEnemyFormation = $24
@@ -611,7 +613,7 @@ SpinningShipAnimationLoop
 	
 	lda #ego_device.DEBUG
 	sta ego_reg.DEVICE
-	lda #ego_debug_cmd.DEBUG
+	lda #ego_debug.cmd.DEBUG
 	sta ego_reg.CMD
 	lda #ego_device.GRAPHICS
 	sta ego_reg.DEVICE
@@ -2232,7 +2234,7 @@ SkipToNextBullet
 ;-------------------------------------------------------------------
 ; download char
 ;-------------------------------------------------------------------
-downloadChar	lda #ego_gfx_cmd.GET_CHAR
+downloadChar	lda #cmd.GET_CHAR
 		sta ego_reg.CMD
 		ldy currentLevel
 		lda levelSurfaceDataHiPtrArray,y
@@ -2255,7 +2257,7 @@ getchar		lda ego_reg.DATA
 ;-------------------------------------------------------------------
 ; upload char in x
 ;-------------------------------------------------------------------
-uploadChar	lda #ego_gfx_cmd.SET_CHAR
+uploadChar	lda #cmd.SET_CHAR
 		sta ego_reg.CMD
 		ldy currentLevel
 		lda levelSurfaceDataHiPtrArray,y
@@ -3768,7 +3770,7 @@ checkShaftEx	rts
 ;		lda bulletCharY,x
 ;		sta temp
 ;
-;		lda #ego_gfx_cmd.SET_CHAR
+;		lda #cmd.SET_CHAR
 ;		sta ego_reg.CMD
 ;		lda #1
 ;		sta ego_reg.DATA
@@ -4189,23 +4191,23 @@ keyboardEx	rts
 ; renderSprites
 ;------------------------------------------------------------
 renderSprites	ldx #7
-renderSprites3	ldy #ego_gfx_cmd.DIS_SPRITE				;enable or disable sprite
+renderSprites3	ldy #cmd.DIS_SPRITE				;enable or disable sprite
 		lda msbForSpriteArray,x
 		and vic_d015
 		beq renderSprites1
-		ldy #ego_gfx_cmd.ENA_SPRITE
+		ldy #cmd.ENA_SPRITE
 renderSprites1	sty ego_reg.CMD
 		stx ego_reg.DATA
 		tay
 		beq renderSprites2
 
-		lda #ego_gfx_cmd.SPRITE_DATA			;associate sprite with shape
+		lda #cmd.SPRITE_DATA			;associate sprite with shape
 		sta ego_reg.CMD
 		stx ego_reg.DATA				;sprite no
 		lda sprite0Ptr,x
 		sta ego_reg.DATA				;shape no
 		
-		lda #ego_gfx_cmd.SPRITE_MODE			;set sprite mode
+		lda #cmd.SPRITE_MODE			;set sprite mode
 		sta ego_reg.CMD
 		stx ego_reg.DATA				;sprite no
 		lda spriteModus,x
@@ -4215,7 +4217,7 @@ renderSprites1	sty ego_reg.CMD
 		asl
 		tay						;Y = X * 2
 		
-		lda #ego_gfx_cmd.SET_SPRITE_XY			;set sprite XY-pos
+		lda #cmd.SET_SPRITE_XY			;set sprite XY-pos
 		sta ego_reg.CMD
 		stx ego_reg.DATA				;sprite no
 		
@@ -4237,7 +4239,7 @@ renderSprites4	lda vic_d000,y					;sprite X pos
 renderSprites2	dex
 		bpl renderSprites3
 
-		lda #ego_gfx_cmd.RENDER_SPRITES
+		lda #cmd.RENDER_SPRITES
 		sta ego_reg.CMD
 
 		jmp egoram.waitForCommand
@@ -4645,12 +4647,12 @@ waitvcnt	cmp vcount
 ;------------------------------------------------------------
 setScreenLines	lda #ego_device.GRAPHICS	;debug device is default after reset
 		sta ego_reg.DEVICE
-		lda #ego_gfx_cmd.SET_BLIT_WIDTH
+		lda #cmd.SET_BLIT_WIDTH
 		sta ego_reg.CMD
 		lda #40						;BLITWIDTH
 		sta ego_reg.DATA
 		
-		lda #ego_gfx_cmd.SET_BLIT_HEIGHT
+		lda #cmd.SET_BLIT_HEIGHT
 		sta ego_reg.CMD
 		lda #136		
 		sta ego_reg.DATA
@@ -4661,10 +4663,10 @@ setScreenLines	lda #ego_device.GRAPHICS	;debug device is default after reset
 		lda #>gfxmem
 		sta ptr+1
 		
-		lda #ego_gfx_cmd.ABORT
+		lda #cmd.ABORT
 		sta ego_reg.CMD
 		
-		lda #ego_gfx_cmd.LINE_PTR
+		lda #cmd.LINE_PTR
 		sta ego_reg.CMD
 		ldx #136
 		stx ego_reg.DATA
@@ -4828,7 +4830,7 @@ addPtr64a	rts
 ;
 ;------------------------------------------------------------		
 uploadSprite	ldy #0
-		lda #ego_gfx_cmd.SHAPE_DATA
+		lda #cmd.SHAPE_DATA
 		sta ego_reg.CMD
 		stx ego_reg.DATA				;shape no
 		lda #3		
@@ -4847,7 +4849,7 @@ uploadSprite1	lda (ptr),y
 ;------------------------------------------------------------
 ;
 ;------------------------------------------------------------
-char2title	lda #ego_gfx_cmd.CHAR_TO_VIDEO
+char2title	lda #cmd.CHAR_TO_VIDEO
 		sta ego_reg.CMD
 		
 		lda #<titlechars
@@ -4881,7 +4883,7 @@ char2title	lda #ego_gfx_cmd.CHAR_TO_VIDEO
 ;------------------------------------------------------------
 ;
 ;------------------------------------------------------------
-char2gfx	lda #ego_gfx_cmd.CHAR_TO_VIDEO
+char2gfx	lda #cmd.CHAR_TO_VIDEO
 		sta ego_reg.CMD
 
 		lda scrollPositionLoPtr

@@ -16,13 +16,15 @@ must be the same in both files:
 |-------------------------------------------|--------------------|
 | `EgoReg` (`EGO_REG_*`, EgoRAM.h)          | `.enum ego_reg` members ($D5xx addresses; C holds the offsets) |
 | `EgoDevice` (`EGO_DEVICE_*`, EgoRAM.h)    | `.enum ego_device` members |
-| `EgoCmd` (`EGO_CMD_*`, each device's .c)  | `.enum ego_<device>_cmd` members |
+| `EgoCmd` (`EGO_CMD_*`, each device's .c)  | `.enum cmd` members in `.local ego_<device>` |
 | `EgoSpriteMode` (`EGO_MODE_*`, ego_gfx.c) | `.enum ego_sprite_mode` members |
 
 Each device's command enum is private to its compile unit and therefore
-uniformly named `EgoCmd` in C. On the asm side the commands are scoped
-MADS enums (referenced as e.g. `ego_gfx_cmd.RENDER_SPRITES`), so command
-names only need to be unique within their device. A C enumerator
+uniformly named `EgoCmd` in C. On the asm side every device has a
+`.local ego_<device>` namespace holding an `.enum cmd`, referenced as
+`ego_gfx.cmd.RENDER_SPRITES` — or just `cmd.RENDER_SPRITES` in a source
+file that selects its default device with a global `.use ego_gfx`.
+Command names only need to be unique within their device. A C enumerator
 `EGO_CMD_X` corresponds to the member `X` of the device's asm enum.
 
 Rules when changing them:

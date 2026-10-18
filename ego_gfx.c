@@ -18,9 +18,9 @@
 #define EGO_MAX_SHAPES 256
 
 // Command bytes written to EGO_REG_CMD while the graphics device is active.
-// The values are part of the wire protocol and must match the scoped enum
-// ego_gfx_cmd in asm/EgoRAM-Equates.asm, so only append new commands at the
-// end.
+// The values are part of the wire protocol and must match the enum cmd in
+// the ego_gfx namespace of asm/EgoRAM-Equates.asm, so only append new
+// commands at the end.
 typedef enum : uint8_t {
     EGO_CMD_RENDER_SPRITES = 1, // 0 is EGO_CMD_INIT, common to all devices
     EGO_CMD_SET_WRITEABLE,

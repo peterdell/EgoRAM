@@ -9,9 +9,9 @@
 #include "ego_debug.h"
 
 // Command bytes written to EGO_REG_CMD while the debug device is active.
-// The values are part of the wire protocol and must match the scoped enum
-// ego_debug_cmd in asm/EgoRAM-Equates.asm, so only append new commands at the
-// end.
+// The values are part of the wire protocol and must match the enum cmd in
+// the ego_debug namespace of asm/EgoRAM-Equates.asm, so only append new
+// commands at the end.
 typedef enum : uint8_t {
     EGO_CMD_DEBUG = 1 // 0 is EGO_CMD_INIT, common to all devices
 } EgoCmd;

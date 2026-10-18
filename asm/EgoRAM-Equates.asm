@@ -18,17 +18,21 @@ EGO_MEM_CHARSET		= $d580	;8 byte of chararacter $30 when CHBAS is at $d400
 	MOS6502
 	.ende
 
-;Commands are scoped per device (e.g. "lda #ego_gfx_cmd.RENDER_SPRITES").
+;Commands are scoped per device: "lda #ego_gfx.cmd.RENDER_SPRITES", or just
+;"lda #cmd.RENDER_SPRITES" after a global ".use ego_gfx".
 ;Every device's first command is INIT = 0: reset device to power-on state.
 
 ;Commands of ego_device.DEBUG
-	.enum ego_debug_cmd
+	.local ego_debug
+	.enum cmd
 	INIT
 	DEBUG			;print debug state to log output
 	.ende
+	.endl
 
 ;Commands of ego_device.GRAPHICS
-	.enum ego_gfx_cmd
+	.local ego_gfx
+	.enum cmd
 	INIT
 	RENDER_SPRITES
 	SET_WRITEABLE
@@ -53,14 +57,17 @@ EGO_MEM_CHARSET		= $d580	;8 byte of chararacter $30 when CHBAS is at $d400
 	SET_CHAR		;update 8 bytes for single character
 	GET_CHAR		;get 8 bytes for single character
 	.ende
+	.endl
 
 ;Commands of ego_device.MOS6502
-	.enum ego_mos6502_cmd
+	.local ego_mos6502
+	.enum cmd
 	INIT
 	SET_MEMORY		;addr lo/hi, length lo/hi + length data bytes
 	GET_MEMORY		;addr lo/hi, length lo/hi -> length data bytes
 	EXECUTE			;cycles lo/hi, runs at least that many cycles
 	.ende
+	.endl
 
 ;Sprite blit modes of the graphics device (ego_gfx_cmd.SPRITE_MODE)
 	.enum ego_sprite_mode
