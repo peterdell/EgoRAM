@@ -55,7 +55,7 @@ int dy_array[EGO_MAX_SPRITES];
 static char strbuf[256];
 
 static uint8_t *char_font = (uint8_t *)vt100_font_8x8;
-static uint32_t mode;
+static EgoMode mode;
 
 static volatile uint8_t *video_ram;
 // static volatile uint8_t *char_ram;
@@ -63,8 +63,8 @@ static volatile uint8_t *cart_d5xx;
 static volatile uint32_t ticks;
 static bool uart_init_once;
 
-static uint8_t ego_cmd;
-static uint32_t ego_state;
+static EgoCmd ego_cmd;
+static EgoState ego_state;
 static uint32_t ego_shape_no;
 static uint32_t ego_sprite_no;
 static uint32_t ego_line_no;

@@ -1,90 +1,121 @@
 #define EGO_MAX_SPRITES 64
 #define EGO_MAX_SHAPES 256
 
-#define EGO_MODE_ATARI 0
-#define EGO_MODE_USB 1
+// Operating mode of the cartridge, internal to the firmware.
+typedef enum : uint8_t
+{
+	EGO_MODE_ATARI,
+	EGO_MODE_USB
+} EgoMode;
 
 #define EGO_UART_ID uart0
 #define EGO_BAUD_RATE 115200
 #define EGO_UART_TX_PIN 28
 #define EGO_UART_RX_PIN 29
 
-#define EGO_REG_CMD 0
-#define EGO_REG_STATUS 1
-#define EGO_REG_DATA 2
+// Register offsets within $D5xx. The values are part of the wire protocol
+// and must match asm/EgoRAM-Equates.asm.
+typedef enum : uint8_t
+{
+	EGO_REG_CMD,
+	EGO_REG_STATUS,
+	EGO_REG_DATA
+} EgoReg;
 
-#define EGO_CMD_RENDER_SPRITES 0
-#define EGO_CMD_SET_WRITEABLE 1
-#define EGO_CMD_SET_READONLY 2
-#define EGO_CMD_ABORT 3
-#define EGO_CMD_SHAPE_DATA 4
-#define EGO_CMD_DEL_SHAPE 5
-#define EGO_CMD_SPRITE_DATA 6
-#define EGO_CMD_DEL_SPRITE 7
-#define EGO_CMD_ENA_SPRITE 8
-#define EGO_CMD_DIS_SPRITE 9
-#define EGO_CMD_SET_SPRITE_X 10
-#define EGO_CMD_SET_SPRITE_Y 11
-#define EGO_CMD_SET_SPRITE_XY 12
-#define EGO_CMD_SET_BLIT_WIDTH 13
-#define EGO_CMD_SET_BLIT_HEIGHT 14
-#define EGO_CMD_LINE_PTR 15
-#define EGO_CMD_FILL_MEM 16
-#define EGO_CMD_SPRITE_MODE 17
-#define EGO_CMD_CHARSET 18
-#define EGO_CMD_CHAR_TO_VIDEO 19
-#define EGO_CMD_SET_CHAR 20
-#define EGO_CMD_GET_CHAR 21
+_Static_assert(EGO_REG_DATA == 2, "EgoReg values must match asm/EgoRAM-Equates.asm");
 
-#define EGO_CMD_DEBUG 99
+// Command bytes written to EGO_REG_CMD. The values are part of the wire protocol
+// and must match asm/EgoRAM-Equates.asm, so only append new commands at the end.
+typedef enum : uint8_t
+{
+	EGO_CMD_RENDER_SPRITES,
+	EGO_CMD_SET_WRITEABLE,
+	EGO_CMD_SET_READONLY,
+	EGO_CMD_ABORT,
+	EGO_CMD_SHAPE_DATA,
+	EGO_CMD_DEL_SHAPE,
+	EGO_CMD_SPRITE_DATA,
+	EGO_CMD_DEL_SPRITE,
+	EGO_CMD_ENA_SPRITE,
+	EGO_CMD_DIS_SPRITE,
+	EGO_CMD_SET_SPRITE_X,
+	EGO_CMD_SET_SPRITE_Y,
+	EGO_CMD_SET_SPRITE_XY,
+	EGO_CMD_SET_BLIT_WIDTH,
+	EGO_CMD_SET_BLIT_HEIGHT,
+	EGO_CMD_LINE_PTR,
+	EGO_CMD_FILL_MEM,
+	EGO_CMD_SPRITE_MODE,
+	EGO_CMD_CHARSET,
+	EGO_CMD_CHAR_TO_VIDEO,
+	EGO_CMD_SET_CHAR,
+	EGO_CMD_GET_CHAR,
 
-#define EGO_ST_IDLE 0
-#define EGO_ST_SHAPE_NO 1
-#define EGO_ST_SHAPE_WIDTH 2
-#define EGO_ST_SHAPE_HEIGHT 3
-#define EGO_ST_SHAPE_BPP 4
-#define EGO_ST_SHAPE_DATA 5
-#define EGO_ST_SPRITE_NO 6
-#define EGO_ST_SPRITE_SHAPE_NO 7
-#define EGO_ST_SPRITE_X_LO 8
-#define EGO_ST_SPRITE_X_HI 9
-#define EGO_ST_SPRITE_Y_LO 10
-#define EGO_ST_SPRITE_Y_HI 11
-#define EGO_ST_SPRITE_ENA 12
-#define EGO_ST_SPRITE_DIS 13
-#define EGO_ST_BLITWITH 14
-#define EGO_ST_BLITHEIGHT 15
-#define EGO_ST_LINE_NO 16
-#define EGO_ST_LINE_DATA_LO 17
-#define EGO_ST_LINE_DATA_HI 18
-#define EGO_ST_FILL_MEM_LO 19
-#define EGO_ST_FILL_MEM_HI 20
-#define EGO_ST_FILL_LEN_LO 21
-#define EGO_ST_FILL_LEN_HI 22
-#define EGO_ST_FILL_BYTE 23
-#define EGO_ST_SPRITE_MODE 24
-#define EGO_ST_CHARSET_NO 25
-#define EGO_ST_CHARSET_DATA 26
-#define EGO_ST_CHR2GFX_SRC_LO 27
-#define EGO_ST_CHR2GFX_SRC_HI 28
-#define EGO_ST_CHR2GFX_SRC_INC_LO 29
-#define EGO_ST_CHR2GFX_SRC_INC_HI 30
-#define EGO_ST_CHR2GFX_DST_LO 31
-#define EGO_ST_CHR2GFX_DST_HI 32
-#define EGO_ST_CHR2GFX_DST_INC_LO 33
-#define EGO_ST_CHR2GFX_DST_INC_HI 34
-#define EGO_ST_CHR2GFX_WIDTH 35
-#define EGO_ST_CHR2GFX_HEIGHT 36
-#define EGO_ST_CHR2GFX_CHARSET_NO 37
-#define EGO_ST_CHR2GFX_SCROLL 38
-#define EGO_ST_CHR2GFX_COL38 39
-#define EGO_ST_CHAR_NO 40
-#define EGO_ST_CHAR_DATA 41
-#define EGO_ST_CHAR_GET_DATA 42
+	EGO_CMD_DEBUG = 99
+} EgoCmd;
 
-#define EGO_MODE_XOR 0
-#define EGO_MODE_MASK 1
-#define EGO_MODE_SPECIAL 2
+_Static_assert(EGO_CMD_GET_CHAR == 21, "EgoCmd values must match asm/EgoRAM-Equates.asm");
+
+// This is the internal state of the EGO command parser. It is used to keep track of what data is expected next.
+// It is not directly related to the commands themselves, but rather to the state of the parser as it processes incoming data.
+// Order can be changed without problems, but the order of the states must be maintained for the parser to function correctly.
+typedef enum : uint8_t
+{
+	EGO_ST_IDLE,
+	EGO_ST_SHAPE_NO,
+	EGO_ST_SHAPE_WIDTH,
+	EGO_ST_SHAPE_HEIGHT,
+	EGO_ST_SHAPE_BPP,
+	EGO_ST_SHAPE_DATA,
+	EGO_ST_SPRITE_NO,
+	EGO_ST_SPRITE_SHAPE_NO,
+	EGO_ST_SPRITE_X_LO,
+	EGO_ST_SPRITE_X_HI,
+	EGO_ST_SPRITE_Y_LO,
+	EGO_ST_SPRITE_Y_HI,
+	EGO_ST_SPRITE_ENA,
+	EGO_ST_SPRITE_DIS,
+	EGO_ST_BLITWITH,
+	EGO_ST_BLITHEIGHT,
+	EGO_ST_LINE_NO,
+	EGO_ST_LINE_DATA_LO,
+	EGO_ST_LINE_DATA_HI,
+	EGO_ST_FILL_MEM_LO,
+	EGO_ST_FILL_MEM_HI,
+	EGO_ST_FILL_LEN_LO,
+	EGO_ST_FILL_LEN_HI,
+	EGO_ST_FILL_BYTE,
+	EGO_ST_SPRITE_MODE,
+	EGO_ST_CHARSET_NO,
+	EGO_ST_CHARSET_DATA,
+	EGO_ST_CHR2GFX_SRC_LO,
+	EGO_ST_CHR2GFX_SRC_HI,
+	EGO_ST_CHR2GFX_SRC_INC_LO,
+	EGO_ST_CHR2GFX_SRC_INC_HI,
+	EGO_ST_CHR2GFX_DST_LO,
+	EGO_ST_CHR2GFX_DST_HI,
+	EGO_ST_CHR2GFX_DST_INC_LO,
+	EGO_ST_CHR2GFX_DST_INC_HI,
+	EGO_ST_CHR2GFX_WIDTH,
+	EGO_ST_CHR2GFX_HEIGHT,
+	EGO_ST_CHR2GFX_CHARSET_NO,
+	EGO_ST_CHR2GFX_SCROLL,
+	EGO_ST_CHR2GFX_COL38,
+	EGO_ST_CHAR_NO,
+	EGO_ST_CHAR_DATA,
+	EGO_ST_CHAR_GET_DATA
+} EgoState;
+
+// Sprite blit mode, set via EGO_CMD_SPRITE_MODE. The values are part of the
+// wire protocol and must match asm/EgoRAM-Equates.asm.
+typedef enum : uint8_t
+{
+	EGO_MODE_XOR,
+	EGO_MODE_MASK,
+	EGO_MODE_SPECIAL
+} EgoSpriteMode;
+
+_Static_assert(EGO_MODE_SPECIAL == 2, "EgoSpriteMode values must match asm/EgoRAM-Equates.asm");
 
 /*
 Sprite data:
@@ -107,7 +138,7 @@ typedef struct
 typedef struct
 {
 	uint8_t enabled;
-	uint8_t mode;
+	EgoSpriteMode mode;
 	uint16_t xpos;
 	uint16_t ypos;
 	uint8_t shape_no;
