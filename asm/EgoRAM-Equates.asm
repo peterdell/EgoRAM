@@ -10,6 +10,7 @@ EGO_MEM_CHARSET		= $d580	;8 byte of chararacter $30 when CHBAS is at $d400
 
 EGO_DEVICE_DEBUG	= 0	;active after reset
 EGO_DEVICE_GRAPHICS	= 1
+EGO_DEVICE_MOS6502	= 2
 
 ;Commands of all devices
 EGO_CMD_INIT		= 0	;reset device to power-on state
@@ -40,6 +41,11 @@ EGO_CMD_CHARSET		= 19	; TODO: SET_CHARSET
 EGO_CMD_CHAR_TO_VIDEO	= 20
 EGO_CMD_SET_CHAR	= 21	; Update 8 bytes for single characters
 EGO_CMD_GET_CHAR	= 22	; Get 8 bytes for single character
+
+;Commands of EGO_DEVICE_MOS6502
+EGO_CMD_SET_MEMORY	= 1	;addr lo/hi, length lo/hi + length data bytes
+EGO_CMD_GET_MEMORY	= 2	;addr lo/hi, length lo/hi -> length data bytes
+EGO_CMD_EXECUTE		= 3	;cycles lo/hi, runs at least that many cycles
 
 EGO_MODE_XOR 		= 0
 EGO_MODE_MASK		= 1

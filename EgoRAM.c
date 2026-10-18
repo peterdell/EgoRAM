@@ -43,8 +43,10 @@ S5      1   gpio 25
 
 #include "atari_cart.h"
 #include "EgoRAM.h"
+#include "ego_device.h"
 #include "ego_gfx.h"
 #include "ego_debug.h"
+#include "ego_mos6502.h"
 #include "cvideo.h"
 
 char c;
@@ -73,6 +75,7 @@ static uint32_t ego_out_len;
 static const ego_device_desc_t *const __not_in_flash("ego_devices") ego_devices[] = {
     [EGO_DEVICE_DEBUG] = &debug_device,
     [EGO_DEVICE_GRAPHICS] = &gfx_device,
+    [EGO_DEVICE_MOS6502] = &mos6502_device,
 };
 
 static PIO pio = pio0;

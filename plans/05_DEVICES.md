@@ -41,10 +41,12 @@ device lives in `ego_gfx.c`/`ego_gfx.h`:
 - `ego_gfx.h` exposes the device's wire protocol (`EgoCmd`,
   `EgoSpriteMode`, synced per 01_RULES.md), the descriptor
   `gfx_device`, `gfx_init()`, the blit accessors and `test()`.
-- `EgoRAM.h` is the core contract: registers, devices, parser phases,
-  `ego_cmd_desc_t`/`ego_device_desc_t`, `EGO_PARAMS_MAX` and the parser
-  services `stream_in()`/`stream_out()` (stream_out serves the first
-  byte in EGO_REG_DATA, the rest on subsequent reads).
+- `EgoRAM.h` is the core contract: registers, devices, parser phases
+  and the d5xx/log services. `ego_device.h` holds everything a device
+  implementation needs: `EGO_CMD_INIT`, `EGO_PARAMS_MAX`, `EGO_PACKED`,
+  `ego_cmd_desc_t`/`ego_device_desc_t` and the parser services
+  `stream_in()`/`stream_out()` (stream_out serves the first byte in
+  EGO_REG_DATA, the rest on subsequent reads).
 - The core (`EgoRAM.c`) dispatches generically through
   `ego_devices[]`, indexed by `EgoDevice` and placed in RAM like the
   command tables. Writing an unknown device number to EGO_REG_DEVICE

@@ -90,7 +90,6 @@ static uint8_t manta[] = {
 // instead of unpacking indexed bytes. The command table takes header_len from
 // sizeof(), which keeps the expected byte count and the declared layout in
 // sync.
-#define EGO_PACKED __attribute__((packed))
 
 typedef struct EGO_PACKED {
     uint8_t shape_no;

@@ -43,6 +43,8 @@ add_executable( EgoRAM
                 EgoRAM.c
                 ego_gfx.c
                 ego_debug.c
+                ego_mos6502.c
+                fake6502.c
                 atari_cart.c
                 cvideo.c
 		)

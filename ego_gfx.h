@@ -1,6 +1,6 @@
 #pragma once
 
-#include "EgoRAM.h"
+#include "ego_device.h"
 
 // Graphics device (EGO_DEVICE_GRAPHICS): shapes, sprites, charsets and
 // character-to-bitmap rendering. All state and command handlers are private
