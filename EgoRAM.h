@@ -22,10 +22,21 @@ typedef enum : uint8_t {
 typedef enum : uint8_t {
     EGO_REG_CMD,
     EGO_REG_STATUS,
-    EGO_REG_DATA
+    EGO_REG_DATA,
+    EGO_REG_DEVICE
 } EgoReg;
 
-_Static_assert(EGO_REG_DATA == 2, "EgoReg values must match asm/EgoRAM-Equates.asm");
+_Static_assert(EGO_REG_DEVICE == 3, "EgoReg values must match asm/EgoRAM-Equates.asm");
+
+// Devices inside the cartridge, selected by writing the device number to
+// EGO_REG_DEVICE. Graphics is device 0 and active after reset. The values are
+// part of the wire protocol and must match asm/EgoRAM-Equates.asm, so only
+// append new devices at the end.
+typedef enum : uint8_t {
+    EGO_DEVICE_GRAPHICS
+} EgoDevice;
+
+_Static_assert(EGO_DEVICE_GRAPHICS == 0, "EgoDevice values must match asm/EgoRAM-Equates.asm");
 
 // Command bytes written to EGO_REG_CMD. The values are part of the wire protocol
 // and must match asm/EgoRAM-Equates.asm, so only append new commands at the end.
@@ -104,6 +115,19 @@ typedef struct {
     uint16_t xold;
     uint16_t yold;
 } sprite_t;
+
+// State of the graphics device (EGO_DEVICE_GRAPHICS), the only device
+// implemented so far. Future devices group their state the same way.
+typedef struct {
+    uint16_t blitwidth;        // blit area width in bytes
+    uint16_t blitheight;       // blit area height in lines
+    uint32_t line_no;          // line count of a pending LINE_PTR stream
+    uint16_t line_ptr[256];    // video RAM offset of each screen line
+    uint8_t line_staging[512]; // LINE_PTR DATA_IN buffer (lo/hi pairs)
+    shape_t shapes[EGO_MAX_SHAPES];
+    sprite_t sprites[EGO_MAX_SPRITES];
+    uint8_t *charsets[256];
+} ego_gfx_t;
 
 void set_blitwidth(uint16_t width);
 void set_blitheight(uint16_t heigth);

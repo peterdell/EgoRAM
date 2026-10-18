@@ -14,6 +14,7 @@ must be the same in both files:
 | EgoRAM.h (enum)                | EgoRAM-Equates.asm        |
 |--------------------------------|---------------------------|
 | `EgoReg` (`EGO_REG_*`)         | `EGO_REG_*`               |
+| `EgoDevice` (`EGO_DEVICE_*`)   | `EGO_DEVICE_*`            |
 | `EgoCmd` (`EGO_CMD_*`)         | `EGO_CMD_*`               |
 | `EgoSpriteMode` (`EGO_MODE_*`) | `EGO_MODE_*`              |
 

@@ -3,9 +3,12 @@
 EGO_REG_CMD		= $d500
 EGO_REG_STATUS		= $d501
 EGO_REG_DATA		= $d502
+EGO_REG_DEVICE		= $d503	;device selector (EGO_DEVICE_*)
 
 EGO_MEM_SCREEN		= $d540	;$20/$28/$30 bytes of screen memory for LMS
 EGO_MEM_CHARSET		= $d580	;8 byte of chararacter $30 when CHBAS is at $d400
+
+EGO_DEVICE_GRAPHICS	= 0	;active after reset
 
 EGO_CMD_RENDER_SPRITES	= 0
 EGO_CMD_SET_WRITEABLE	= 1
