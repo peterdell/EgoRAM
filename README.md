@@ -1,13 +1,13 @@
 # EgoRAM
 
-The Atari 8-bit RAM cartridge with an own ego and opinion what should be in the RAM.
+The Atari 8-bit RAM cartridge with its own ego and opinion on what should be in the RAM.
 
 
 $D500-$D5FF
 ===========
 
 
-| Address | Name | Descriptio Read | Write |
+| Address | Name | Description Read | Write |
 |---------+------+------------|
 | $D500   |      | 'E'        |
 | $D501   |      | 'R'        |
@@ -30,6 +30,6 @@ $D500-$D5FF
 
 [Getting started with Raspberry Pi
 Pico-series](https://pip-assets.raspberrypi.com/categories/610-raspberry-pi-pico/documents/RP-008276-DS-1-getting-started-with-pico.pdf)
-If you get an error message "No accessible RP2040/RP2350 devices in BOOTSEL mode were found." accompanied by a note similar to Device at bus 1, address 7 appears to beana RP2040 device in BOOTSEL mode, but picotool was unable to connect, indicating that there was a Pico-series device connected, then you can run picotool using sudo, e.g.
+If you get an error message "No accessible RP2040/RP2350 devices in BOOTSEL mode were found." accompanied by a note similar to Device at bus 1, address 7 appears to an RP2040 device in BOOTSEL mode, but picotool was unable to connect, indicating that there was a Pico-series device connected, then you can run picotool using sudo, e.g.
 $ sudo picotool info -a
-If you get this message on Windows, you will need to install a driver. Download and run [Zadig](https://zadig.akeo.ie/), select RP2 Boot (Interface 1) from the dropdown box and select WinUSB as the driver, and click on the "Install Driver" button. Wait for the installation to complete - this may take a few minutes.
+If you get this message on Windows, you will need to install a driver. Download and run [Zadig](https://zadig.akeo.ie/), select RP2 Boot (Interface 1) from the dropdown box, select WinUSB as the driver, and click the "Install Driver" button. Wait for the installation to complete - this may take a few minutes.
