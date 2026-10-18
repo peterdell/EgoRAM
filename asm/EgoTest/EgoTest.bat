@@ -1,9 +1,9 @@
 @echo off
 
-set RELEASE=EgoDemo
+set RELEASE=EgoTest
 set SOURCE=%RELEASE%.asm
 set TARGET=%RELEASE%.xex
-..\bin\mads -o:%TARGET% -l -t %SOURCE%
+..\..\bin\mads -o:%TARGET% -l -t -i:.. %SOURCE%
 if errorlevel 1 goto :error
 rem 	start %TARGET% 
 goto :eof
