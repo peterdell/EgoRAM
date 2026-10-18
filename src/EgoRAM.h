@@ -1,8 +1,10 @@
 #pragma once
 
+#include <stdint.h>
+
 // Places the function in RAM (section ".time_critical.EgoRAM") so it runs
-// at full speed without flash wait states. Requires the pico SDK headers to
-// be included first.
+// at full speed without flash wait states. Compile units using it must
+// include the pico SDK headers first, which define __not_in_flash.
 #define RAM_FUNC __not_in_flash("EgoRAM")
 
 // Operating mode of the cartridge, internal to the firmware.

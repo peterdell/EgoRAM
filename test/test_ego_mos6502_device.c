@@ -11,30 +11,7 @@
 #include "ego_device.h"
 #include "ego_mos6502.h"
 #include "ego_mos6502_device.h"
-
-#pragma region Parser service stubs
-
-static uint8_t *in_ptr;
-static uint32_t in_len;
-static void (*in_done)(void);
-static const uint8_t *out_ptr;
-static uint32_t out_len;
-
-void stream_in(uint8_t *dst, uint32_t len, void (*done)(void)) {
-    in_ptr = dst;
-    in_len = len;
-    in_done = done;
-}
-
-void stream_out(const uint8_t *src, uint32_t len) {
-    out_ptr = src;
-    out_len = len;
-}
-
-void ego_log(const char *format, ...) {
-}
-
-#pragma endregion
+#include "EgoRAM_stubs.h"
 
 static void run(uint8_t cmd, const uint8_t *params) {
     assert(cmd < mos6502_device.num_commands);

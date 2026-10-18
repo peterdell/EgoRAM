@@ -16,11 +16,13 @@
 cmake_minimum_required(VERSION 3.13)
 project(EgoRAMTests C)
 set(CMAKE_C_STANDARD 23)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON) # for IDE IntelliSense
 
 enable_testing()
 
 add_executable(test_ego_mos6502_device
         test_ego_mos6502_device.c
+        EgoRAM_stubs.c
         ../src/ego_mos6502_device.c
         ../src/fake6502.c
 )

@@ -15,6 +15,8 @@
 #ifndef __ATARI_CART_H__
 #define __ATARI_CART_H__
 
+#include <stdbool.h>
+
 #define ATARI_PHI2_PIN 22 // used on boot to check if we are plugged into an atari or usb
 
 void atari_cart_main();
