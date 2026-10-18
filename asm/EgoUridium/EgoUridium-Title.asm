@@ -3,7 +3,11 @@
 	.if 0 = 1
 	icl "EgoUridium.asm"
 	.endif
-	
+
+frame_loop
+	lda #8
+	sta consol
+
 loop	lda vcount
 	cmp #15
 	bcc loop
@@ -18,13 +22,12 @@ kernel	sta wsync
 	sta colbk
 
 	lda trig0
-	beq fire
+	beq continue
 	lda consol
 	and #1
-	beq start
-	jmp loop
+	beq continue
+	jmp frame_loop
 
-fire
-start
+continue
 	lda #0
 	jmp main
