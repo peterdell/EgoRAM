@@ -1,6 +1,9 @@
 ﻿# Proposal: Table-driven command parser
 
-Status: PROPOSAL - not yet implemented.
+Status: IMPLEMENTED 2026-10-18 (firmware builds; hardware/emulator
+verification with EgoUridium still pending). The command table is placed
+in RAM via `__not_in_flash` because GCC otherwise moves the const table
+to flash .rodata.
 
 Alternative to the `EGO_ST_*`/`EGO_STATE_*` rename block in 02_NAMING.md:
 instead of renaming ~40 parser states, remove them. Wire protocol,

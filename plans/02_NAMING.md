@@ -55,7 +55,11 @@ Status: PROPOSAL - not yet implemented.
 | `EGO_CMD_GET_CHAR`         | unchanged                     |                              |
 | `EGO_CMD_DEBUG`            | unchanged                     |                              |
 
-## EgoState (firmware-internal)
+## EgoState (firmware-internal) - OBSOLETE
+
+03_COMMAND_TABLE.md has been implemented; the states below no longer
+exist. The remaining EgoState phases (IDLE, HEADER, DATA_IN, DATA_OUT)
+need no renaming. This section is kept for reference only.
 
 Prefix `EGO_ST_` -> `EGO_STATE_` throughout; additionally:
 

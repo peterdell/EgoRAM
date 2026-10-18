@@ -65,18 +65,19 @@ static bool uart_init_once;
 
 static EgoCmd ego_cmd;
 static EgoState ego_state;
-static uint32_t ego_shape_no;
-static uint32_t ego_sprite_no;
+static uint8_t ego_params[16];
+static uint8_t ego_param_idx;
+static uint8_t *ego_in_ptr;
+static uint32_t ego_in_len;
+static void (*ego_in_done)(void);
+static const uint8_t *ego_out_ptr;
+static uint32_t ego_out_len;
 static uint32_t ego_line_no;
 static uint32_t ego_charset_no;
-static uint32_t ego_cnt;
-static uint8_t ego_shape_width;
-static uint16_t ego_shape_height;
 static uint16_t ego_blitwidth;
 static uint16_t ego_blitheight;
 static uint16_t ego_line_ptr[256];
-static uint16_t ego_addr;
-static uint16_t ego_len;
+static uint8_t ego_line_staging[512];
 static uint16_t ego_src_ptr;
 static uint16_t ego_dst_ptr;
 static uint16_t ego_src_inc;
@@ -85,7 +86,6 @@ static uint8_t ego_chr2gfx_width;
 static uint8_t ego_chr2gfx_height;
 static uint8_t ego_chr2gfx_scroll;
 static uint8_t ego_chr2gfx_col38;
-static uint8_t ego_char_no;
 
 static shape_t shape_array[EGO_MAX_SHAPES];
 static sprite_t sprite_array[EGO_MAX_SPRITES];
@@ -467,248 +467,237 @@ void print_debug()
     }
 }
 
+static void __not_in_flash_func(stream_in)(uint8_t *dst, uint32_t len, void (*done)(void))
+{
+    if (len == 0)
+        return;
+    ego_in_ptr = dst;
+    ego_in_len = len;
+    ego_in_done = done;
+    ego_state = EGO_ST_DATA_IN;
+}
+
+static void __not_in_flash_func(cmd_render_sprites)(const uint8_t *p)
+{
+    render_sprites();
+}
+
+static void __not_in_flash_func(cmd_set_writeable)(const uint8_t *p)
+{
+    set_writeable(true);
+    cart_d5xx[EGO_REG_STATUS] |= 0x01;
+}
+
+static void __not_in_flash_func(cmd_set_readonly)(const uint8_t *p)
+{
+    set_writeable(false);
+    cart_d5xx[EGO_REG_STATUS] &= ~0x01;
+}
+
+static void __not_in_flash_func(cmd_abort)(const uint8_t *p)
+{
+}
+
+static void __not_in_flash_func(cmd_shape_data)(const uint8_t *p)
+{
+    shape_t *shape = &shape_array[p[0]];
+
+    shape->width = p[1];
+    shape->height = p[2];
+    shape->bitsperpix = p[3];
+    if (shape->data != NULL)
+    {
+        free(shape->data);
+    }
+    if (shape->mask != NULL)
+    {
+        free(shape->mask);
+        shape->mask = NULL;
+    }
+    shape->data = malloc(shape->width * shape->height);
+    stream_in(shape->data, shape->width * shape->height, NULL);
+}
+
+static void __not_in_flash_func(cmd_sprite_data)(const uint8_t *p)
+{
+    sprite_array[p[0]].shape_no = p[1];
+}
+
+static void __not_in_flash_func(cmd_enable_sprite)(const uint8_t *p)
+{
+    sprite_array[p[0]].enabled = true;
+}
+
+static void __not_in_flash_func(cmd_disable_sprite)(const uint8_t *p)
+{
+    sprite_array[p[0]].enabled = false;
+}
+
+static void __not_in_flash_func(cmd_set_sprite_x)(const uint8_t *p)
+{
+    sprite_t *sprite = &sprite_array[p[0]];
+
+    sprite->xold = sprite->xpos;
+    sprite->xpos = p[1] | p[2] << 8;
+}
+
+static void __not_in_flash_func(cmd_set_sprite_y)(const uint8_t *p)
+{
+    sprite_t *sprite = &sprite_array[p[0]];
+
+    sprite->yold = sprite->ypos;
+    sprite->ypos = p[1] | p[2] << 8;
+}
+
+static void __not_in_flash_func(cmd_set_sprite_xy)(const uint8_t *p)
+{
+    sprite_t *sprite = &sprite_array[p[0]];
+
+    sprite->xold = sprite->xpos;
+    sprite->xpos = p[1] | p[2] << 8;
+    sprite->yold = sprite->ypos;
+    sprite->ypos = p[3] | p[4] << 8;
+}
+
+static void __not_in_flash_func(cmd_set_blit_width)(const uint8_t *p)
+{
+    ego_blitwidth = p[0];
+}
+
+static void __not_in_flash_func(cmd_set_blit_height)(const uint8_t *p)
+{
+    ego_blitheight = p[0];
+}
+
+static void __not_in_flash_func(line_ptr_done)(void)
+{
+    for (uint32_t i = 0; i < ego_line_no; i++)
+    {
+        ego_line_ptr[i] = ego_line_staging[2 * i] | (ego_line_staging[2 * i + 1] & 0x1f) << 8;
+    }
+}
+
+static void __not_in_flash_func(cmd_line_ptr)(const uint8_t *p)
+{
+    ego_line_no = p[0];
+    stream_in(ego_line_staging, ego_line_no * 2, line_ptr_done);
+}
+
+static void __not_in_flash_func(cmd_fill_mem)(const uint8_t *p)
+{
+    uint16_t addr = p[0] | (p[1] & 0x3f) << 8;
+    uint16_t len = p[2] | p[3] << 8;
+
+    if (addr + len > 0x3fff)
+    {
+        len = 0x3fff - addr;
+    }
+    memset((void *)&video_ram[addr], p[4], len);
+}
+
+static void __not_in_flash_func(cmd_sprite_mode)(const uint8_t *p)
+{
+    sprite_array[p[0]].mode = p[1];
+}
+
+static void __not_in_flash_func(cmd_charset)(const uint8_t *p)
+{
+    ego_charset_no = p[0];
+    if (charset_array[ego_charset_no] == NULL)
+    {
+        charset_array[ego_charset_no] = malloc(2048);
+    }
+    stream_in(charset_array[ego_charset_no], 2048, NULL);
+}
+
+static void __not_in_flash_func(cmd_char_to_video)(const uint8_t *p)
+{
+    ego_src_ptr = p[0] | p[1] << 8;
+    ego_src_inc = p[2] | p[3] << 8;
+    ego_dst_ptr = p[4] | p[5] << 8;
+    ego_dst_inc = p[6] | p[7] << 8;
+    ego_chr2gfx_width = p[8];
+    ego_chr2gfx_height = p[9];
+    ego_charset_no = p[10];
+    ego_chr2gfx_scroll = p[11] & 0x07;
+    ego_chr2gfx_col38 = p[12];
+    char_to_video();
+}
+
+static void __not_in_flash_func(cmd_set_char)(const uint8_t *p)
+{
+    ego_charset_no = p[0];
+    stream_in(&charset_array[ego_charset_no][p[1] << 3], 8, NULL);
+}
+
+static void __not_in_flash_func(cmd_get_char)(const uint8_t *p)
+{
+    const uint8_t *char_data = &charset_array[p[0]][p[1] << 3];
+
+    cart_d5xx[EGO_REG_DATA] = char_data[0];
+    ego_out_ptr = &char_data[1];
+    ego_out_len = 7;
+    ego_state = EGO_ST_DATA_OUT;
+}
+
+static void __not_in_flash_func(cmd_debug)(const uint8_t *p)
+{
+    print_debug();
+}
+
+typedef struct
+{
+    uint8_t header_len;
+    void (*execute)(const uint8_t *params);
+} ego_cmd_desc_t;
+
+// Explicitly placed in RAM so that command dispatch never stalls on flash XIP.
+static const ego_cmd_desc_t __not_in_flash("ego_commands") ego_commands[] = {
+    [EGO_CMD_RENDER_SPRITES] = {0, cmd_render_sprites},
+    [EGO_CMD_SET_WRITEABLE] = {0, cmd_set_writeable},
+    [EGO_CMD_SET_READONLY] = {0, cmd_set_readonly},
+    [EGO_CMD_ABORT] = {0, cmd_abort},
+    [EGO_CMD_SHAPE_DATA] = {4, cmd_shape_data},
+    [EGO_CMD_SPRITE_DATA] = {2, cmd_sprite_data},
+    [EGO_CMD_ENA_SPRITE] = {1, cmd_enable_sprite},
+    [EGO_CMD_DIS_SPRITE] = {1, cmd_disable_sprite},
+    [EGO_CMD_SET_SPRITE_X] = {3, cmd_set_sprite_x},
+    [EGO_CMD_SET_SPRITE_Y] = {3, cmd_set_sprite_y},
+    [EGO_CMD_SET_SPRITE_XY] = {5, cmd_set_sprite_xy},
+    [EGO_CMD_SET_BLIT_WIDTH] = {1, cmd_set_blit_width},
+    [EGO_CMD_SET_BLIT_HEIGHT] = {1, cmd_set_blit_height},
+    [EGO_CMD_LINE_PTR] = {1, cmd_line_ptr},
+    [EGO_CMD_FILL_MEM] = {5, cmd_fill_mem},
+    [EGO_CMD_SPRITE_MODE] = {2, cmd_sprite_mode},
+    [EGO_CMD_CHARSET] = {1, cmd_charset},
+    [EGO_CMD_CHAR_TO_VIDEO] = {13, cmd_char_to_video},
+    [EGO_CMD_SET_CHAR] = {2, cmd_set_char},
+    [EGO_CMD_GET_CHAR] = {2, cmd_get_char},
+    [EGO_CMD_DEBUG] = {0, cmd_debug},
+};
+
 void __not_in_flash_func(do_data)(uint8_t data)
 {
-    int i;
-    uint8_t mask;
-    bool maskon = false;
-
     switch (ego_state)
     {
-    case EGO_ST_SHAPE_NO:
-        ego_shape_no = data;
-        ego_state = EGO_ST_SHAPE_WIDTH;
-        break;
-    case EGO_ST_SHAPE_WIDTH:
-        shape_array[ego_shape_no].width = data;
-        ego_state = EGO_ST_SHAPE_HEIGHT;
-        break;
-    case EGO_ST_SHAPE_HEIGHT:
-        shape_array[ego_shape_no].height = data;
-        if (shape_array[ego_shape_no].data != NULL)
+    case EGO_ST_HEADER:
+        ego_params[ego_param_idx++] = data;
+        if (ego_param_idx == ego_commands[ego_cmd].header_len)
         {
-            free(shape_array[ego_shape_no].data);
+            ego_state = EGO_ST_IDLE; // execute() may start a data phase
+            ego_commands[ego_cmd].execute(ego_params);
         }
-        if (shape_array[ego_shape_no].mask != NULL)
-        {
-            free(shape_array[ego_shape_no].mask);
-            shape_array[ego_shape_no].mask = NULL;
-        }
-        shape_array[ego_shape_no].data = malloc(shape_array[ego_shape_no].width * shape_array[ego_shape_no].height);
-        // shape_array[ego_shape_no].mask = malloc(shape_array[ego_shape_no].width * shape_array[ego_shape_no].height);
-        ego_state = EGO_ST_SHAPE_BPP;
         break;
-    case EGO_ST_SHAPE_BPP:
-        shape_array[ego_shape_no].bitsperpix = data;
-        ego_state = EGO_ST_SHAPE_DATA;
-        ego_cnt = 0;
-        break;
-    case EGO_ST_SHAPE_DATA:
-        shape_array[ego_shape_no].data[ego_cnt] = data;
-
-        ego_cnt++;
-
-        if (ego_cnt == shape_array[ego_shape_no].width * shape_array[ego_shape_no].height)
+    case EGO_ST_DATA_IN:
+        *ego_in_ptr++ = data;
+        if (--ego_in_len == 0)
         {
             ego_state = EGO_ST_IDLE;
+            if (ego_in_done != NULL)
+            {
+                ego_in_done();
+            }
         }
-
-        break;
-    case EGO_ST_SPRITE_NO:
-        ego_sprite_no = data;
-
-        if (ego_cmd == EGO_CMD_SET_SPRITE_X || ego_cmd == EGO_CMD_SET_SPRITE_XY)
-            ego_state = EGO_ST_SPRITE_X_LO;
-        else if (ego_cmd == EGO_CMD_SET_SPRITE_Y)
-            ego_state = EGO_ST_SPRITE_Y_LO;
-        else if (ego_cmd == EGO_CMD_SPRITE_MODE)
-            ego_state = EGO_ST_SPRITE_MODE;
-        else
-            ego_state = EGO_ST_SPRITE_SHAPE_NO;
-        break;
-    case EGO_ST_SPRITE_SHAPE_NO:
-        sprite_array[ego_sprite_no].shape_no = data;
-        ego_state = EGO_ST_IDLE;
-        break;
-    case EGO_ST_SPRITE_X_LO:
-        sprite_array[ego_sprite_no].xold = sprite_array[ego_sprite_no].xpos;
-        sprite_array[ego_sprite_no].xpos = data;
-        ego_state = EGO_ST_SPRITE_X_HI;
-        break;
-    case EGO_ST_SPRITE_X_HI:
-        sprite_array[ego_sprite_no].xpos |= data << 8;
-        if (ego_cmd == EGO_CMD_SET_SPRITE_XY)
-            ego_state = EGO_ST_SPRITE_Y_LO;
-        else
-            ego_state = EGO_ST_IDLE;
-        break;
-    case EGO_ST_SPRITE_Y_LO:
-        sprite_array[ego_sprite_no].yold = sprite_array[ego_sprite_no].ypos;
-        sprite_array[ego_sprite_no].ypos = data;
-        ego_state = EGO_ST_SPRITE_Y_HI;
-        break;
-    case EGO_ST_SPRITE_Y_HI:
-        sprite_array[ego_sprite_no].ypos |= data << 8;
-        ego_state = EGO_ST_IDLE;
-        break;
-    case EGO_ST_SPRITE_ENA:
-        ego_sprite_no = data;
-        sprite_array[ego_sprite_no].enabled = true;
-        ego_state = EGO_ST_IDLE;
-        break;
-    case EGO_ST_SPRITE_DIS:
-        ego_sprite_no = data;
-        sprite_array[ego_sprite_no].enabled = false;
-        ego_state = EGO_ST_IDLE;
-        break;
-    case EGO_ST_BLITWITH:
-        ego_blitwidth = data;
-        ego_state = EGO_ST_IDLE;
-        break;
-    case EGO_ST_BLITHEIGHT:
-        ego_blitheight = data;
-        ego_state = EGO_ST_IDLE;
-        break;
-    case EGO_ST_LINE_NO:
-        ego_line_no = data;
-        ego_cnt = 0;
-        ego_state = EGO_ST_LINE_DATA_LO;
-        break;
-    case EGO_ST_LINE_DATA_LO:
-        ego_line_ptr[ego_cnt] = data;
-        ego_state = EGO_ST_LINE_DATA_HI;
-        break;
-    case EGO_ST_LINE_DATA_HI:
-        ego_line_ptr[ego_cnt++] |= (data & 0x1f) << 8;
-        if (ego_cnt >= ego_line_no)
-        {
-            ego_state = EGO_ST_IDLE;
-            // ego_log("cnt:%d %04X\n", ego_cnt, ego_line_ptr[ego_cnt - 1]);
-        }
-        else
-            ego_state = EGO_ST_LINE_DATA_LO;
-        break;
-    case EGO_ST_FILL_MEM_LO:
-        ego_addr = data;
-        ego_state = EGO_ST_FILL_MEM_HI;
-        break;
-    case EGO_ST_FILL_MEM_HI:
-        ego_addr |= (data & 0x3f) << 8;
-        ego_state = EGO_ST_FILL_LEN_LO;
-        break;
-    case EGO_ST_FILL_LEN_LO:
-        ego_len = data;
-        ego_state = EGO_ST_FILL_LEN_HI;
-        break;
-    case EGO_ST_FILL_LEN_HI:
-        ego_len |= data << 8;
-        ego_state = EGO_ST_FILL_BYTE;
-        break;
-    case EGO_ST_FILL_BYTE:
-        if (ego_addr + ego_len > 0x3fff)
-        {
-            ego_len = 0x3fff - ego_addr;
-        }
-        memset((void *)&video_ram[ego_addr], data, ego_len);
-        ego_state = EGO_ST_IDLE;
-        break;
-    case EGO_ST_SPRITE_MODE:
-        sprite_array[ego_sprite_no].mode = data;
-        ego_state = EGO_ST_IDLE;
-        break;
-    case EGO_ST_CHARSET_NO:
-        ego_charset_no = data;
-        if (charset_array[ego_charset_no] == NULL)
-        {
-            charset_array[ego_charset_no] = malloc(2048);
-        }
-        ego_state = EGO_ST_CHARSET_DATA;
-        ego_cnt = 0;
-        break;
-    case EGO_ST_CHARSET_DATA:
-        charset_array[ego_charset_no][ego_cnt] = data;
-        ego_cnt++;
-        if (ego_cnt >= 2048)
-        {
-            ego_state = EGO_ST_IDLE;
-            // ego_log("charset %d loaded\n", ego_charset_no);
-        }
-        break;
-    case EGO_ST_CHR2GFX_SRC_LO:
-        ego_src_ptr = data;
-        ego_state = EGO_ST_CHR2GFX_SRC_HI;
-        break;
-    case EGO_ST_CHR2GFX_SRC_HI:
-        ego_src_ptr |= data << 8;
-        ego_state = EGO_ST_CHR2GFX_SRC_INC_LO;
-        break;
-    case EGO_ST_CHR2GFX_SRC_INC_LO:
-        ego_src_inc = data;
-        ego_state = EGO_ST_CHR2GFX_SRC_INC_HI;
-        break;
-    case EGO_ST_CHR2GFX_SRC_INC_HI:
-        ego_src_inc |= data << 8;
-        ego_state = EGO_ST_CHR2GFX_DST_LO;
-        break;
-    case EGO_ST_CHR2GFX_DST_LO:
-        ego_dst_ptr = data;
-        ego_state = EGO_ST_CHR2GFX_DST_HI;
-        break;
-    case EGO_ST_CHR2GFX_DST_HI:
-        ego_dst_ptr |= data << 8;
-        ego_state = EGO_ST_CHR2GFX_DST_INC_LO;
-        break;
-    case EGO_ST_CHR2GFX_DST_INC_LO:
-        ego_dst_inc = data;
-        ego_state = EGO_ST_CHR2GFX_DST_INC_HI;
-        break;
-    case EGO_ST_CHR2GFX_DST_INC_HI:
-        ego_dst_inc |= data << 8;
-        ego_state = EGO_ST_CHR2GFX_WIDTH;
-        break;
-    case EGO_ST_CHR2GFX_WIDTH:
-        ego_chr2gfx_width = data;
-        ego_state = EGO_ST_CHR2GFX_HEIGHT;
-        break;
-    case EGO_ST_CHR2GFX_HEIGHT:
-        ego_chr2gfx_height = data;
-        ego_state = EGO_ST_CHR2GFX_CHARSET_NO;
-        break;
-    case EGO_ST_CHR2GFX_CHARSET_NO:
-        ego_charset_no = data;
-        if (ego_cmd == EGO_CMD_SET_CHAR || ego_cmd == EGO_CMD_GET_CHAR)
-            ego_state = EGO_ST_CHAR_NO;
-        else
-            ego_state = EGO_ST_CHR2GFX_SCROLL;
-        break;
-    case EGO_ST_CHR2GFX_SCROLL:
-        ego_chr2gfx_scroll = data & 0x07;
-        ego_state = EGO_ST_CHR2GFX_COL38;
-        break;
-    case EGO_ST_CHR2GFX_COL38:
-        ego_chr2gfx_col38 = data;
-        ego_state = EGO_ST_IDLE;
-        char_to_video();
-        break;
-    case EGO_ST_CHAR_NO:
-        ego_char_no = data;
-        if (ego_cmd == EGO_CMD_GET_CHAR)
-        {
-            ego_state = EGO_ST_CHAR_GET_DATA;
-            cart_d5xx[EGO_REG_DATA] = charset_array[ego_charset_no][(ego_char_no << 3)];
-            ego_cnt = 1;
-        }
-        else
-        {
-            ego_cnt = 0;
-            ego_state = EGO_ST_CHAR_DATA;
-        }
-        break;
-    case EGO_ST_CHAR_DATA:
-        charset_array[ego_charset_no][(ego_char_no << 3) + ego_cnt] = data;
-        ego_cnt++;
-        if (ego_cnt >= 8)
-            ego_state = EGO_ST_IDLE;
         break;
     default:
         break;
@@ -718,80 +707,22 @@ void __not_in_flash_func(do_data)(uint8_t data)
 void __not_in_flash_func(do_command)(uint8_t data)
 {
     ego_cmd = data;
+    ego_param_idx = 0;
 
-    switch (ego_cmd)
+    if (data >= sizeof(ego_commands) / sizeof(ego_commands[0]) || ego_commands[data].execute == NULL)
     {
-    case EGO_CMD_RENDER_SPRITES:
-        render_sprites();
-        break;
-    case EGO_CMD_SET_WRITEABLE:
-        set_writeable(true);
-        cart_d5xx[EGO_REG_STATUS] |= 0x01;
-        break;
-    case EGO_CMD_SET_READONLY:
-        set_writeable(false);
-        cart_d5xx[EGO_REG_STATUS] &= ~0x01;
-        break;
-    case EGO_CMD_ABORT:
         ego_state = EGO_ST_IDLE;
-        break;
-    case EGO_CMD_SHAPE_DATA:
-        ego_state = EGO_ST_SHAPE_NO;
-        break;
-    case EGO_CMD_DEL_SHAPE:
-        break;
-    case EGO_CMD_SPRITE_DATA:
-        ego_state = EGO_ST_SPRITE_NO;
-        break;
-    case EGO_CMD_DEL_SPRITE:
-        break;
-    case EGO_CMD_ENA_SPRITE:
-        ego_state = EGO_ST_SPRITE_ENA;
-        break;
-    case EGO_CMD_DIS_SPRITE:
-        ego_state = EGO_ST_SPRITE_DIS;
-        break;
-    case EGO_CMD_SET_SPRITE_X:
-        ego_state = EGO_ST_SPRITE_NO;
-        break;
-    case EGO_CMD_SET_SPRITE_Y:
-        ego_state = EGO_ST_SPRITE_NO;
-        break;
-    case EGO_CMD_SET_SPRITE_XY:
-        ego_state = EGO_ST_SPRITE_NO;
-        break;
-    case EGO_CMD_SET_BLIT_WIDTH:
-        ego_state = EGO_ST_BLITWITH;
-        break;
-    case EGO_CMD_SET_BLIT_HEIGHT:
-        ego_state = EGO_ST_BLITHEIGHT;
-        break;
-    case EGO_CMD_LINE_PTR:
-        ego_state = EGO_ST_LINE_NO;
-        break;
-    case EGO_CMD_FILL_MEM:
-        ego_state = EGO_ST_FILL_MEM_LO;
-        break;
-    case EGO_CMD_SPRITE_MODE:
-        ego_state = EGO_ST_SPRITE_NO;
-        break;
-    case EGO_CMD_CHARSET:
-        ego_state = EGO_ST_CHARSET_NO;
-        break;
-    case EGO_CMD_CHAR_TO_VIDEO:
-        ego_state = EGO_ST_CHR2GFX_SRC_LO;
-        break;
-    case EGO_CMD_SET_CHAR:
-        ego_state = EGO_ST_CHR2GFX_CHARSET_NO;
-        break;
-    case EGO_CMD_GET_CHAR:
-        ego_state = EGO_ST_CHR2GFX_CHARSET_NO;
-        break;
-    case EGO_CMD_DEBUG:
-        print_debug();
-        break;
-    default:
-        break;
+        return;
+    }
+
+    if (ego_commands[data].header_len == 0)
+    {
+        ego_state = EGO_ST_IDLE; // execute() may start a data phase
+        ego_commands[data].execute(NULL);
+    }
+    else
+    {
+        ego_state = EGO_ST_HEADER;
     }
 }
 
@@ -857,10 +788,9 @@ uint8_t read_d5xx(uint8_t addr)
 
     switch (ego_state)
     {
-    case EGO_ST_CHAR_GET_DATA:
-        cart_d5xx[addr] = charset_array[ego_charset_no][(ego_char_no << 3) + ego_cnt];
-        ego_cnt++;
-        if (ego_cnt > 7)
+    case EGO_ST_DATA_OUT:
+        cart_d5xx[addr] = *ego_out_ptr++;
+        if (--ego_out_len == 0)
             ego_state = EGO_ST_IDLE;
         break;
     default:

@@ -56,61 +56,15 @@ typedef enum : uint8_t
 
 _Static_assert(EGO_CMD_GET_CHAR == 21, "EgoCmd values must match asm/EgoRAM-Equates.asm");
 
-// This is the internal state of the EGO command parser. It is used to keep track of what data is expected next.
-// It is not directly related to the commands themselves, but rather to the state of the parser as it processes incoming data.
-// Order can be changed without problems, but the order of the states must be maintained for the parser to function correctly.
+// Phase of the EGO command parser. Each command's fixed parameter bytes are
+// described by the command table in EgoRAM.c; bulk payloads are streamed in
+// the DATA phases. See plans/03_COMMAND_TABLE.md.
 typedef enum : uint8_t
 {
-	EGO_ST_IDLE,
-
-	EGO_ST_SHAPE_NO,
-	EGO_ST_SHAPE_WIDTH,
-	EGO_ST_SHAPE_HEIGHT,
-	EGO_ST_SHAPE_BPP,
-	EGO_ST_SHAPE_DATA,
-
-	EGO_ST_SPRITE_NO,
-	EGO_ST_SPRITE_SHAPE_NO,
-	EGO_ST_SPRITE_X_LO,
-	EGO_ST_SPRITE_X_HI,
-	EGO_ST_SPRITE_Y_LO,
-	EGO_ST_SPRITE_Y_HI,
-	EGO_ST_SPRITE_ENA,
-	EGO_ST_SPRITE_DIS,
-
-	EGO_ST_BLITWITH,
-	EGO_ST_BLITHEIGHT,
-
-	EGO_ST_LINE_NO,
-	EGO_ST_LINE_DATA_LO,
-	EGO_ST_LINE_DATA_HI,
-
-	EGO_ST_FILL_MEM_LO,
-	EGO_ST_FILL_MEM_HI,
-	EGO_ST_FILL_LEN_LO,
-	EGO_ST_FILL_LEN_HI,
-	EGO_ST_FILL_BYTE,
-
-	EGO_ST_SPRITE_MODE,
-
-	EGO_ST_CHARSET_NO,
-	EGO_ST_CHARSET_DATA,
-	EGO_ST_CHR2GFX_SRC_LO,
-	EGO_ST_CHR2GFX_SRC_HI,
-	EGO_ST_CHR2GFX_SRC_INC_LO,
-	EGO_ST_CHR2GFX_SRC_INC_HI,
-	EGO_ST_CHR2GFX_DST_LO,
-	EGO_ST_CHR2GFX_DST_HI,
-	EGO_ST_CHR2GFX_DST_INC_LO,
-	EGO_ST_CHR2GFX_DST_INC_HI,
-	EGO_ST_CHR2GFX_WIDTH,
-	EGO_ST_CHR2GFX_HEIGHT,
-	EGO_ST_CHR2GFX_CHARSET_NO,
-	EGO_ST_CHR2GFX_SCROLL,
-	EGO_ST_CHR2GFX_COL38,
-	EGO_ST_CHAR_NO,
-	EGO_ST_CHAR_DATA,
-	EGO_ST_CHAR_GET_DATA
+	EGO_ST_IDLE,	// no command in progress
+	EGO_ST_HEADER,	// collecting the fixed parameter bytes of a command
+	EGO_ST_DATA_IN,	// streaming bulk data from the Atari
+	EGO_ST_DATA_OUT	// streaming bulk data to the Atari
 } EgoState;
 
 // Sprite blit mode, set via EGO_CMD_SPRITE_MODE. The values are part of the
