@@ -88,14 +88,12 @@ static uint8_t __attribute__((aligned(4))) mapping[] = {
     0b11111101,
     0b11111111};
 
-static void systick_init(void)
-{
+static void systick_init(void) {
     systick_hw->csr = 0x5;        // Enable + CPU-Clock als Quelle
     systick_hw->rvr = 0x00FFFFFF; // Maximaler Reload-Wert (24-Bit)
 }
 
-static void generate_synclines()
-{
+static void generate_synclines() {
     memset(black, BLACK, sizeof(black));
     memset(hsync, BLACK, sizeof(hsync));
     memset(&hsync[HSYNCSTART], SYNC, HSYNCLEN);
@@ -110,8 +108,7 @@ static void generate_synclines()
     memcpy(line1, border, sizeof(line1));
 }
 
-static void __not_in_flash("generate_line") generate_line(uint8_t *buffer)
-{
+static void __not_in_flash("generate_line") generate_line(uint8_t *buffer) {
     unsigned int screenline = bline >> 3;
     unsigned int uint8_tline = bline & 0x07;
     volatile uint8_t *pscreen;
@@ -122,40 +119,32 @@ static void __not_in_flash("generate_line") generate_line(uint8_t *buffer)
     uint8_t fgcol1, fgcol2, bgcol1, bgcol2;
     int x, i;
 
-    if (false)
-    {
+    if (false) {
         pscreen = &video_ram[bline * PAL_WIDTH];
-        for (x = 0; x < PAL_WIDTH; x++)
-        {
+        for (x = 0; x < PAL_WIDTH; x++) {
             c = *pscreen++;
             *buffer++ = mapping[c >> 4];
             *buffer++ = mapping[c & 15];
         }
     }
-    else
-    {
+    else {
         pscreen = &video_ram[bline * PAL_WIDTH];
         pcolor = &color_ram[screenline * PAL_WIDTH];
 
-        for (x = 0; x < PAL_WIDTH; x++)
-        {
+        for (x = 0; x < PAL_WIDTH; x++) {
             // c = uint8_tset[(*pscreen++ << 3) + uint8_tline];
             c = pscreen[x];
 
-            if (BITSPERPIXEL == 4)
-            {
+            if (BITSPERPIXEL == 4) {
                 mask = 128;
-                for (i = 0; i < 4; i++)
-                {
+                for (i = 0; i < 4; i++) {
                     pix = 0x11;
-                    if (c & mask)
-                    {
+                    if (c & mask) {
                         pix |= pcolor[x] << 5;
                     }
 
                     mask >>= 1;
-                    if (c & mask)
-                    {
+                    if (c & mask) {
                         pix |= ((pcolor[x] << 1) & 0x0f);
                     }
 
@@ -163,8 +152,7 @@ static void __not_in_flash("generate_line") generate_line(uint8_t *buffer)
                     *buffer++ = pix;
                 }
             }
-            else
-            {
+            else {
                 *buffer++ = mapping[c >> 4];
                 *buffer++ = mapping[c & 0xf];
             }
@@ -173,8 +161,7 @@ static void __not_in_flash("generate_line") generate_line(uint8_t *buffer)
 }
 
 // Funktion zur Berechnung der echten Frequenz einer State Machine
-float get_sm_frequency(PIO pio, uint sm)
-{
+float get_sm_frequency(PIO pio, uint sm) {
     // 1. Die aktuelle Systemfrequenz abfragen (z.B. Ihre 216 MHz)
     uint32_t sys_clk_hz = clock_get_hz(clk_sys);
 
@@ -189,12 +176,10 @@ float get_sm_frequency(PIO pio, uint sm)
 
     // Sonderfall der Hardware: Wenn INT = 0 ist, wird es als maximaler Teiler (65536) interpretiert
     float total_divider;
-    if (div_int == 0)
-    {
+    if (div_int == 0) {
         total_divider = 65536.0f;
     }
-    else
-    {
+    else {
         total_divider = (float)div_int + ((float)div_frac / 256.0f);
     }
 
@@ -205,8 +190,7 @@ float get_sm_frequency(PIO pio, uint sm)
 /*
  * The main routine sets up the whole shebang
  */
-void initialise_cvideo(PIO pio)
-{
+void initialise_cvideo(PIO pio) {
     // pio_0 = pio0;	                    // Assign the PIO
 
     glb_pio = pio;
@@ -304,17 +288,14 @@ void initialise_cvideo(PIO pio)
 // The DMA interrupt handler
 // This feeds the state machine cvideo_sync with data for the PAL(ish) video signal
 //
-static void __not_in_flash("cvideo_dma_handler") cvideo_dma_handler(void)
-{
+static void __not_in_flash("cvideo_dma_handler") cvideo_dma_handler(void) {
     // Switch condition on the vertical scanline number (vline)
     // Each statement does a dma_channel_set_read_addr to point the PIO to the next data to output
     //
 
     // dma_channel_set_read_addr(dma_channel_0, line0, true);
-    if (true)
-    {
-        switch (vline)
-        {
+    if (true) {
+        switch (vline) {
 
         // First deal with the vertical sync scanlines
         // Also on scanline 3, preload the first pixel buffer scanline
@@ -349,13 +330,11 @@ static void __not_in_flash("cvideo_dma_handler") cvideo_dma_handler(void)
         //
         default:
 
-            if (pline0 == line0)
-            {
+            if (pline0 == line0) {
                 pline0 = line1;
                 pline1 = line0;
             }
-            else
-            {
+            else {
                 pline0 = line0;
                 pline1 = line1;
             }
@@ -365,10 +344,8 @@ static void __not_in_flash("cvideo_dma_handler") cvideo_dma_handler(void)
             break;
         }
     }
-    else // NTSC
-    {
-        switch (vline)
-        {
+    else { // NTSC
+        switch (vline) {
         case 1 ... 2:
             dma_channel_set_read_addr(dma_channel_0, vsync, true);
             break;
@@ -386,13 +363,11 @@ static void __not_in_flash("cvideo_dma_handler") cvideo_dma_handler(void)
 #else
         case 40 ... 239:
 #endif
-            if (pline0 == line0)
-            {
+            if (pline0 == line0) {
                 pline0 = line1;
                 pline1 = line0;
             }
-            else
-            {
+            else {
                 pline0 = line0;
                 pline1 = line1;
             }
@@ -413,17 +388,15 @@ static void __not_in_flash("cvideo_dma_handler") cvideo_dma_handler(void)
     // Increment and wrap the counters
     //
     vline++;
-    if ((pal_mode && vline > 312) || (!pal_mode && vline > 262))
-    {              // If we've gone past the bottom scanline then
-        vline = 1; // Reset the scanline counter
+    if ((pal_mode && vline > 312) || (!pal_mode && vline > 262)) { // If we've gone past the bottom scanline then
+        vline = 1;                                                 // Reset the scanline counter
         vblank_count++;
 
         // write_d5xx(EGO_REG_CMD, EGO_CMD_MOVEMENT);
 
         cursor_frame_cnt++;
 
-        if (cursor_frame_cnt >= CURSOR_TIME)
-        {
+        if (cursor_frame_cnt >= CURSOR_TIME) {
             cursor_frame_cnt = 0;
             cursor_onoff = !cursor_onoff;
         }
@@ -442,8 +415,7 @@ static void __not_in_flash("cvideo_dma_handler") cvideo_dma_handler(void)
 // - buffer_size_words: Number of bytes to transfer
 // - handler: Address of the interrupt handler, or NULL for no interrupts
 //
-static void __not_in_flash("cvideo_configure_pio_dma") cvideo_configure_pio_dma(PIO pio, uint sm, uint dma_channel, uint transfer_size, size_t buffer_size, irq_handler_t handler)
-{
+static void __not_in_flash("cvideo_configure_pio_dma") cvideo_configure_pio_dma(PIO pio, uint sm, uint dma_channel, uint transfer_size, size_t buffer_size, irq_handler_t handler) {
     dma_channel_config c = dma_channel_get_default_config(dma_channel);
     channel_config_set_transfer_data_size(&c, transfer_size);
     channel_config_set_read_increment(&c, true);
@@ -454,28 +426,24 @@ static void __not_in_flash("cvideo_configure_pio_dma") cvideo_configure_pio_dma(
                           buffer_size,   // Size of buffer
                           true           // Start flag (true = start immediately)
     );
-    if (handler != NULL)
-    {
+    if (handler != NULL) {
         dma_channel_set_irq1_enabled(dma_channel, true);
         irq_set_exclusive_handler(DMA_IRQ_1, handler);
         irq_set_enabled(DMA_IRQ_1, true);
     }
 }
 
-void setPalNtscMode(int pal)
-{
+void setPalNtscMode(int pal) {
     pal_mode = pal;
     printf("Pal/Ntsc mode set to mode: %d\n", pal);
 }
 
-void setGraphicsMode(int mode)
-{
+void setGraphicsMode(int mode) {
     graphics_mode = mode;
     printf("Graphics mode set to mode: %d\n", mode);
 }
 
-static float pio_sm_get_frequency(PIO pio, uint sm)
-{
+static float pio_sm_get_frequency(PIO pio, uint sm) {
     uint32_t div_reg = pio->sm[sm].clkdiv;
 
     // Extrahiere den Integer-Teil (Bits 31:16) und den Fraktional-Teil (Bits 15:8)
@@ -484,16 +452,14 @@ static float pio_sm_get_frequency(PIO pio, uint sm)
 
     float tatsaechlicher_teiler = div_int + div_frac;
 
-    if (tatsaechlicher_teiler == 0.0f)
-    {
+    if (tatsaechlicher_teiler == 0.0f) {
         tatsaechlicher_teiler = 1.0f;
     }
 
     return (float)clock_get_hz(clk_sys) / tatsaechlicher_teiler;
 }
 
-void change_divisior(int d)
-{
+void change_divisior(int d) {
     static int shifter = 0;
     static double value;
 

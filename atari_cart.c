@@ -37,9 +37,9 @@
 #define DATA_GPIO_MASK 0x001FE000
 #define CCTL_GPIO_MASK 0x00200000 // gpio 21
 #define PHI2_GPIO_MASK 0x00400000 // gpio 22
-#define RW_GPIO_MASK 0x00800000	  // gpio 23
-#define S4_GPIO_MASK 0x01000000	  // gpio 24
-#define S5_GPIO_MASK 0x02000000	  // gpio 25
+#define RW_GPIO_MASK 0x00800000   // gpio 23
+#define S4_GPIO_MASK 0x01000000   // gpio 24
+#define S5_GPIO_MASK 0x02000000   // gpio 25
 
 #define S4_S5_GPIO_MASK 0x03000000
 #define CCTL_RW_GPIO_MASK 0x00A00000
@@ -61,100 +61,92 @@ static volatile unsigned char cart_ram[16 * 1024];
 static volatile unsigned char cart_d5xx[256];
 static volatile bool writeable = true;
 
-volatile unsigned char *RAM_FUNC get_cart_d5xx()
-{
-	return cart_d5xx;
+volatile unsigned char *RAM_FUNC get_cart_d5xx() {
+    return cart_d5xx;
 }
 
-volatile unsigned char *RAM_FUNC get_cart_ram()
-{
-	return cart_ram;
+volatile unsigned char *RAM_FUNC get_cart_ram() {
+    return cart_ram;
 }
 
-void RAM_FUNC emulate_roland()
-{
-	// 8k
-	RD4_HIGH;
-	RD5_HIGH;
+void RAM_FUNC emulate_roland() {
+    // 8k
+    RD4_HIGH;
+    RD5_HIGH;
 
-	uint8_t data;
-	uint32_t pins;
-	uint16_t addr;
-	volatile uint8_t *ram_ptr;
+    uint8_t data;
+    uint32_t pins;
+    uint16_t addr;
+    volatile uint8_t *ram_ptr;
 
-	while (1)
-	{
-		// wait for phi2 high
-		while (!((pins = gpio_get_all()) & PHI2_GPIO_MASK))
-			;
+    while (1) {
+        // wait for phi2 high
+        while (!((pins = gpio_get_all()) & PHI2_GPIO_MASK))
+            ;
 
-		addr = pins & ADDR_GPIO_MASK;
+        addr = pins & ADDR_GPIO_MASK;
 
-		ram_ptr = NULL;
-		if ((pins & S4_GPIO_MASK) == 0)
-			ram_ptr = cart_ram;
-		// ram_ptr = NULL;
-		else if ((pins & S5_GPIO_MASK) == 0)
-			ram_ptr = &cart_ram[0x2000];
-		// ram_ptr = cart_ram;
-		else if ((pins & CCTL_GPIO_MASK) == 0)
-			ram_ptr = cart_d5xx;
+        ram_ptr = NULL;
+        if ((pins & S4_GPIO_MASK) == 0) {
+            ram_ptr = cart_ram;
+        }
+        // ram_ptr = NULL;
+        else if ((pins & S5_GPIO_MASK) == 0) {
+            ram_ptr = &cart_ram[0x2000];
+        }
+        // ram_ptr = cart_ram;
+        else if ((pins & CCTL_GPIO_MASK) == 0) {
+            ram_ptr = cart_d5xx;
+        }
 
-		if (ram_ptr != NULL)
-		{
-			if (!(pins & RW_GPIO_MASK))
-			{
-				// ATARI writes to data bus
-				// read data bus on falling edge of phi2
-				while ((pins = gpio_get_all()) & PHI2_GPIO_MASK)
-					;
-				data = (pins & DATA_GPIO_MASK) >> 13;
+        if (ram_ptr != NULL) {
+            if (!(pins & RW_GPIO_MASK)) {
+                // ATARI writes to data bus
+                // read data bus on falling edge of phi2
+                while ((pins = gpio_get_all()) & PHI2_GPIO_MASK)
+                    ;
+                data = (pins & DATA_GPIO_MASK) >> 13;
 
-				if (ram_ptr == cart_d5xx)
-				{
-					write_d5xx(addr, data);
-				}
-				else if (writeable)
-				{
-					ram_ptr[addr] = data;
-				}
-			}
-			else
-			{
-				// read
-				SET_DATA_MODE_OUT;
-				if (ram_ptr == cart_d5xx)
-				{
-					addr &= 0xff;
-				}
+                if (ram_ptr == cart_d5xx) {
+                    write_d5xx(addr, data);
+                }
+                else if (writeable) {
+                    ram_ptr[addr] = data;
+                }
+            }
+            else {
+                // read
+                SET_DATA_MODE_OUT;
+                if (ram_ptr == cart_d5xx) {
+                    addr &= 0xff;
+                }
 
-				gpio_put_masked(DATA_GPIO_MASK, ((uint32_t)ram_ptr[addr]) << 13);
+                gpio_put_masked(DATA_GPIO_MASK, ((uint32_t)ram_ptr[addr]) << 13);
 
-				//  wait for phi2 low
-				while (gpio_get_all() & PHI2_GPIO_MASK)
-					;
-				SET_DATA_MODE_IN;
-				if (addr == EGO_REG_DATA)
-					ram_ptr[addr] = read_d5xx(addr);
-			}
-		}
-	}
+                //  wait for phi2 low
+                while (gpio_get_all() & PHI2_GPIO_MASK)
+                    ;
+                SET_DATA_MODE_IN;
+                if (addr == EGO_REG_DATA) {
+                    ram_ptr[addr] = read_d5xx(addr);
+                }
+            }
+        }
+    }
 }
 
-void set_writeable(bool truefalse)
-{
-	writeable = truefalse;
+void set_writeable(bool truefalse) {
+    writeable = truefalse;
 }
 
 #define ATARI_PHI2_PIN 22 // used on boot to check if we are plugged into an atari or usb
 
-void RAM_FUNC atari_cart_main()
-{
-	gpio_init_mask(0x0FFFFFFF);
+void RAM_FUNC atari_cart_main() {
+    gpio_init_mask(0x0FFFFFFF);
 
-	gpio_set_dir_in_masked(ADDR_GPIO_MASK | DATA_GPIO_MASK | CCTL_GPIO_MASK | PHI2_GPIO_MASK | RW_GPIO_MASK | S4_GPIO_MASK | S5_GPIO_MASK);
-	gpio_set_dir(RD4_PIN, GPIO_OUT);
-	gpio_set_dir(RD5_PIN, GPIO_OUT);
+    gpio_set_dir_in_masked(ADDR_GPIO_MASK | DATA_GPIO_MASK | CCTL_GPIO_MASK | PHI2_GPIO_MASK | RW_GPIO_MASK | S4_GPIO_MASK | S5_GPIO_MASK);
+    gpio_set_dir(RD4_PIN, GPIO_OUT);
+    gpio_set_dir(RD5_PIN, GPIO_OUT);
 
-	emulate_roland();
+    emulate_roland();
 }

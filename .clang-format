@@ -1,0 +1,40 @@
+# Style for the EgoRAM firmware sources.
+# Key rules: bodies are always braced (InsertBraces), opening braces are
+# attached to the first line, "else" goes on its own line after "}".
+Language: Cpp
+BasedOnStyle: LLVM
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+
+# Keep existing line lengths; do not rewrap long expressions.
+ColumnLimit: 0
+
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterCaseLabel: false
+  AfterControlStatement: Never
+  AfterEnum: false
+  AfterFunction: false
+  AfterStruct: false
+  AfterUnion: false
+  AfterExternBlock: false
+  BeforeElse: true
+  BeforeWhile: false
+
+InsertBraces: true
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AllowShortBlocksOnASingleLine: Never
+AllowShortFunctionsOnASingleLine: None
+
+IndentCaseLabels: false
+PointerAlignment: Right
+SpaceBeforeParens: ControlStatements
+
+# Include order is load-bearing (pico SDK, generated headers) - never reorder.
+SortIncludes: Never
+
+# RAM_FUNC sits between return type and function name (see EgoRAM.h).
+AttributeMacros:
+  - RAM_FUNC
