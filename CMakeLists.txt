@@ -40,13 +40,13 @@ set(CMAKE_CXX_STANDARD 17)
 pico_sdk_init()
 
 add_executable( EgoRAM
-                EgoRAM.c
-                ego_gfx.c
-                ego_debug.c
-                ego_mos6502.c
-                fake6502.c
-                atari_cart.c
-                cvideo.c
+                src/EgoRAM.c
+                src/ego_gfx_device.c
+                src/ego_debug_device.c
+                src/ego_mos6502_device.c
+                src/fake6502.c
+                src/atari_cart.c
+                src/cvideo.c
 		)
 
 #target_compile_options(EgoRAM PRIVATE -save-temps=obj -g)
@@ -68,19 +68,19 @@ pico_enable_stdio_usb(EgoRAM 1)    # USB Serial deaktivieren
 
 pico_add_extra_outputs(EgoRAM)
 
-pico_generate_pio_header(EgoRAM ${CMAKE_CURRENT_LIST_DIR}/cvideo_sync.pio)
-pico_generate_pio_header(EgoRAM ${CMAKE_CURRENT_LIST_DIR}/clock.pio)
+pico_generate_pio_header(EgoRAM ${CMAKE_CURRENT_LIST_DIR}/src/cvideo_sync.pio)
+pico_generate_pio_header(EgoRAM ${CMAKE_CURRENT_LIST_DIR}/src/clock.pio)
 
 add_custom_command(
         OUTPUT ${CMAKE_CURRENT_LIST_DIR}/generated/cvideo_sync.pio.h
-        DEPENDS ${CMAKE_CURRENT_LIST_DIR}/cvideo_sync.pio
-        COMMAND Pioasm ${CMAKE_CURRENT_LIST_DIR}/cvideo_sync.pio ${CMAKE_CURRENT_LIST_DIR}/generated/cvideo_sync.pio.h
+        DEPENDS ${CMAKE_CURRENT_LIST_DIR}/src/cvideo_sync.pio
+        COMMAND Pioasm ${CMAKE_CURRENT_LIST_DIR}/src/cvideo_sync.pio ${CMAKE_CURRENT_LIST_DIR}/generated/cvideo_sync.pio.h
 )
 
 add_custom_command(
         OUTPUT ${CMAKE_CURRENT_LIST_DIR}/generated/clock.pio.h
-        DEPENDS ${CMAKE_CURRENT_LIST_DIR}/clock.pio
-        COMMAND Pioasm ${CMAKE_CURRENT_LIST_DIR}/cvideo_sync.pio ${CMAKE_CURRENT_LIST_DIR}/generated/clock.pio.h
+        DEPENDS ${CMAKE_CURRENT_LIST_DIR}/src/clock.pio
+        COMMAND Pioasm ${CMAKE_CURRENT_LIST_DIR}/src/cvideo_sync.pio ${CMAKE_CURRENT_LIST_DIR}/generated/clock.pio.h
 )
 
 #add_custom_command(

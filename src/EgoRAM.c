@@ -44,9 +44,9 @@ S5      1   gpio 25
 #include "atari_cart.h"
 #include "EgoRAM.h"
 #include "ego_device.h"
-#include "ego_gfx.h"
-#include "ego_debug.h"
-#include "ego_mos6502.h"
+#include "ego_gfx_device.h"
+#include "ego_debug_device.h"
+#include "ego_mos6502_device.h"
 #include "cvideo.h"
 
 char c;

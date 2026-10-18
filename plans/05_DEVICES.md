@@ -32,16 +32,18 @@ with its own command set and state.
 
 Each device is a separate compile unit, so its internals need no device
 prefix — file-level `static` provides the isolation. The graphics
-device lives in `ego_gfx.c`/`ego_gfx.h`:
+device lives in `ego_gfx_device.c`/`ego_gfx_device.h`:
 
-- `ego_gfx.c` holds everything private: the state struct and its one
+- `ego_gfx_device.c` holds everything private: the state struct and its one
   instance, the wire-format parameter structs, the command handlers,
   the sprite/blit engine and the command table. Names stay short
   (`cmd_set_char`, `sprite_draw`, `commands[]`).
-- A device's header exposes only its descriptor (plus, for graphics,
-  `gfx_print_debug()` and `test()`). The command enum lives in the .c
-  file, uniformly named `EgoCmd` in every device, synced with the
-  equates file per 01_RULES.md.
+- A device's `_device.h` header exposes only its descriptor (plus, for
+  graphics, `gfx_print_debug()` and `test()`). The command enum —
+  uniformly named `EgoCmd` in every device — lives in the device's
+  wire-protocol header (`ego_<device>.h`, e.g. `ego_gfx.h`), which only
+  the device's compile unit and its tests include, and is synced with
+  the equates file per 01_RULES.md.
 - `EgoRAM.h` is the core contract: registers, devices, parser phases
   and the d5xx/log services. `ego_device.h` holds everything a device
   implementation needs: `EGO_CMD_INIT`, `EGO_PARAMS_MAX`, `EGO_PACKED`,
@@ -66,7 +68,7 @@ a `cmd_init` handler at `[EGO_CMD_INIT]`, one `EgoDevice` enum value
 ## The debug device (implemented 2026-10-18)
 
 `EGO_DEVICE_DEBUG` (0, the default device after reset) in
-`ego_debug.c`/`ego_debug.h` is the template for further devices:
+`ego_debug_device.c`/`ego_debug_device.h` is the template for further devices:
 `EGO_CMD_DEBUG` (1, its first command after Init) prints the firmware
 state to the log output, today by calling `gfx_print_debug()`. A client
 that talks to the cartridge without selecting its device first hits the

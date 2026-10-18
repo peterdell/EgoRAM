@@ -1,6 +1,7 @@
 # MOS6502 device (EGO_DEVICE_MOS6502 = 2)
 
-Files: `ego_mos6502.c`, `ego_mos6502.h` (device), `fake6502.c`,
+Files: `ego_mos6502_device.c`, `ego_mos6502_device.h`, `ego_mos6502.h`
+(wire protocol), `fake6502.c`,
 `fake6502.h` (CPU core)
 
 A virtual 6502 CPU running inside the cartridge, so the Atari can

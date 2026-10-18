@@ -10,18 +10,7 @@
 #include "EgoRAM.h"
 #include "fake6502.h"
 #include "ego_mos6502.h"
-
-// Command bytes written to EGO_REG_CMD while the MOS6502 device is active.
-// The values are part of the wire protocol and must match the enum cmd in
-// the ego_mos6502 namespace of asm/EgoRAM-Equates.asm, so only append new
-// commands at the end.
-typedef enum : uint8_t {
-    EGO_CMD_SET_MEMORY = 1, // 0 is EGO_CMD_INIT, common to all devices
-    EGO_CMD_GET_MEMORY,
-    EGO_CMD_EXECUTE
-} EgoCmd;
-
-_Static_assert(EGO_CMD_EXECUTE == 3, "EgoCmd values must match asm/EgoRAM-Equates.asm");
+#include "ego_mos6502_device.h"
 
 // Private 64 KB address space of the virtual CPU.
 static uint8_t memory[0x10000];
@@ -37,7 +26,7 @@ void write6502(uint16_t address, uint8_t value) {
 
 #pragma region Command parameters
 
-// Wire-format parameter blocks, see ego_gfx.c for the conventions.
+// Wire-format parameter blocks, see ego_gfx_device.c for the conventions.
 
 typedef struct EGO_PACKED {
     uint16_t addr;

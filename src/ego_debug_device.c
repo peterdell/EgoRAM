@@ -5,18 +5,9 @@
 #include "pico/stdlib.h"
 
 #include "EgoRAM.h"
-#include "ego_gfx.h"
+#include "ego_gfx_device.h"
 #include "ego_debug.h"
-
-// Command bytes written to EGO_REG_CMD while the debug device is active.
-// The values are part of the wire protocol and must match the enum cmd in
-// the ego_debug namespace of asm/EgoRAM-Equates.asm, so only append new
-// commands at the end.
-typedef enum : uint8_t {
-    EGO_CMD_DEBUG = 1 // 0 is EGO_CMD_INIT, common to all devices
-} EgoCmd;
-
-_Static_assert(EGO_CMD_DEBUG == 1, "EgoCmd values must match asm/EgoRAM-Equates.asm");
+#include "ego_debug_device.h"
 
 // Resets the device to its power-on state; sent by the core to every device
 // at startup. The debug device has no state.
