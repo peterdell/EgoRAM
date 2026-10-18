@@ -1,7 +1,9 @@
 # Proposal: Multiple devices inside the cartridge
 
 Status: IMPLEMENTED 2026-10-18 (selector register and graphics state
-grouping; graphics is still the only device).
+grouping; graphics is still the only device). Same day: the graphics
+device was extracted into its own compile unit, see "Device isolation"
+below.
 
 EgoRAM so far implements only the video/graphics functions. The
 cartridge shall host several devices, graphics being one of them, each
@@ -26,11 +28,40 @@ with its own command set and state.
   parser machinery (`ego_cmd`, `ego_state`, `ego_params`, stream
   in/out pointers) stays shared across devices.
 
+## Device isolation (implemented 2026-10-18)
+
+Each device is a separate compile unit, so its internals need no device
+prefix — file-level `static` provides the isolation. The graphics
+device lives in `ego_gfx.c`/`ego_gfx.h`:
+
+- `ego_gfx.c` holds everything private: the state struct and its one
+  instance, the wire-format parameter structs, the command handlers,
+  the sprite/blit engine and the command table. Names stay short
+  (`cmd_set_char`, `sprite_draw`, `commands[]`).
+- `ego_gfx.h` exposes the device's wire protocol (`EgoCmd`,
+  `EgoSpriteMode`, synced per 01_RULES.md), the descriptor
+  `gfx_device`, `gfx_init()`, the blit accessors and `test()`.
+- `EgoRAM.h` is the core contract: registers, devices, parser phases,
+  `ego_cmd_desc_t`/`ego_device_desc_t`, `EGO_PARAMS_MAX` and the parser
+  services `stream_in()`/`stream_out()` (stream_out serves the first
+  byte in EGO_REG_DATA, the rest on subsequent reads).
+- The core (`EgoRAM.c`) dispatches generically through
+  `ego_devices[]`, indexed by `EgoDevice` and placed in RAM like the
+  command tables. Writing an unknown device number to EGO_REG_DEVICE
+  is ignored, so the readable register always names a real device.
+
+Every device's command 0 is `EGO_CMD_INIT` (defined once in EgoRAM.h and
+the equates file): it resets the device to its power-on state. At
+startup `main()` loops over `ego_devices[]` and sends each device its
+Init command, so a device's `ego_device_desc_t` is its complete
+interface. Device-specific command enums therefore start at 1.
+
+A new device = one compile unit exporting its `ego_device_desc_t` with
+a `cmd_init` handler at `[EGO_CMD_INIT]`, one `EgoDevice` enum value
+(both files, 01_RULES.md) and one row in `ego_devices[]`.
+
 ## Next steps when the second device arrives
 
-- Give each device its own command table; dispatch in `do_command` /
-  `do_data` via `ego_device` (e.g. an `ego_device_desc_t` holding the
-  table, its length and the device state pointer).
 - Decide whether command numbering restarts per device (likely yes,
   since the selector disambiguates) — document it in 01_RULES.md and
   the equates file, e.g. `EGO_<device>_CMD_*` blocks.

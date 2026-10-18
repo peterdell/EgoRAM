@@ -39,8 +39,9 @@ set(CMAKE_CXX_STANDARD 17)
 
 pico_sdk_init()
 
-add_executable( EgoRAM 
-                EgoRAM.c 
+add_executable( EgoRAM
+                EgoRAM.c
+                ego_gfx.c
                 atari_cart.c
                 cvideo.c
 		)
