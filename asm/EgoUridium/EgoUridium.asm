@@ -16,7 +16,12 @@
 
 	.use hardware
 	.use os_xl
+	
+	.ifndef EGO_RAM_PRESENT
+	.def EGO_RAM_PRESENT = 0
+	.endif
 
+dl_target = mathpack
 
 playerScore = $20
 indexCurrentEnemyFormation = $24
@@ -323,7 +328,7 @@ explosion_major46	= 46
 
 		org $8000
 
-		.proc init
+		.proc init			;Relocate from load add to run address.
 		mva #1 coldst
 		ldx #>[[.len main]+$ff]
 		ldy #0
@@ -351,8 +356,14 @@ main_from
 		jsr initGame		
 
 restart		jsr initLevel
-		;jsr UpdateLivesLeft
-		;jmp MaybeStartNewLevel
+		jsr UpdateLivesLeft
+		jmp MaybeStartNewLevel
+
+;------------------------------------------------------------
+; 
+;------------------------------------------------------------
+
+	icl "..\EgoRAM-Library.asm"
 
 ;--------------------------------------------------------------------
 ; DrawEnterLevelSequence
@@ -3378,8 +3389,9 @@ PREPAREHISCORESCREEN
 ;--------------------------------------------------------------------
 ;
 ;--------------------------------------------------------------------
-PREPARETITLESCREEN
-		jmp PREPARETITLESCREEN
+		.proc PREPARETITLESCREEN
+		icl "EgoUridium-Title.asm"
+		.endp
 		
 ;--------------------------------------------------------------------
 ;
@@ -4203,8 +4215,8 @@ renderSprites2	dex
 
 		lda #EGO_CMD_RENDER_SPRITES
 		sta EGO_REG_CMD
-	
-		jmp waitstatus
+
+		jmp egoram.waitForCommand
 
 ;------------------------------------------------------------
 ; joystick input routine
@@ -4400,8 +4412,8 @@ dli0		lda #$02
 ; main game initialization
 ;------------------------------------------------------------
 initGame
-		jsr copyRomRam					;OS is not required, but the RAM underneath
-		jsr initdlist					;initialise Atari Hardware
+		jsr initSystem					;OS is not required, but the RAM underneath
+		jsr initDlist					;initialise Atari Hardware
 		jsr setScreenLines				;upload addresses of gfx lines
 
 		ldx #0
@@ -4426,55 +4438,55 @@ filltitle:	lda #$30					;clear title screen and debug lines
 		stx currentLevel
 		rts
 		
-; =================================================================
-; ATARI 800XL: Ultra-optimierte ROM-to-RAM Routine (SMC-Methode)
-; =================================================================
-copyRomRam   	sei          
-		ldy #$00     
-		sty nmien    					;disable IRQ & NMI
-		
-		; --- startadresse für smc setzen ---
-		lda #$c0      
-		sta sm_rd+2					; high-byte in die lade-anweisung schreiben
-		sta sm_wr+2					; high-byte in die schreib-anweisung schreiben
-	
-page_lp 	
-		; --- schritt 1: rom einblenden & lesen ---
-		lda #$ff
-		sta portb    
-	
-sm_rd   	lda $c000,y					; das high-byte ($c0) wird dynamisch modifiziert
-		sta buffer,y 
-		iny
-		bne sm_rd  
-	
-		; --- schritt 2: ram einblenden & schreiben ---
-		lda #$fe
-		sta portb    
-
-sm_wr1		lda buffer,y 
-sm_wr		sta $c000,y 					; das high-byte ($c0) wird dynamisch modifiziert
-		iny
-		bne sm_wr1 
-	
-		; --- schritt 3: smc-adressen hochzählen ---
-		inc sm_rd+2					; modifiziert direkt das high-byte im befehl oben
-		inc sm_wr+2					; modifiziert direkt das high-byte im befehl oben
-	
-		; --- i/o-bereich überspringen ---
-		lda sm_rd+2
-		cmp #$d0     
-		bne chk_end
-	
-		lda #$d8     
-		sta sm_rd+2   
-		sta sm_wr+2   
-	
-chk_end 	cmp #$00					; fertig bei überlauf von $ff nach $00
-		bne page_lp  
-
-;		cli						;keep IRQ turned off
-		rts
+; ; =================================================================
+; ; ATARI 800XL: Ultra-optimierte ROM-to-RAM Routine (SMC-Methode)
+; ; =================================================================
+; copyRomRam   	sei          
+; 		ldy #$00     
+; 		sty nmien    					;disable IRQ & NMI
+; 		
+; 		; --- startadresse für smc setzen ---
+; 		lda #$c0      
+; 		sta sm_rd+2					; high-byte in die lade-anweisung schreiben
+; 		sta sm_wr+2					; high-byte in die schreib-anweisung schreiben
+; 	
+; page_lp 	
+; 		; --- schritt 1: rom einblenden & lesen ---
+; 		lda #$ff
+; 		sta portb    
+; 	
+; sm_rd   	lda $c000,y					; das high-byte ($c0) wird dynamisch modifiziert
+; 		sta buffer,y 
+; 		iny
+; 		bne sm_rd  
+; 	
+; 		; --- schritt 2: ram einblenden & schreiben ---
+; 		lda #$fe
+; 		sta portb    
+; 
+; sm_wr1		lda buffer,y 
+; sm_wr		sta $c000,y 					; das high-byte ($c0) wird dynamisch modifiziert
+; 		iny
+; 		bne sm_wr1 
+; 	
+; 		; --- schritt 3: smc-adressen hochzählen ---
+; 		inc sm_rd+2					; modifiziert direkt das high-byte im befehl oben
+; 		inc sm_wr+2					; modifiziert direkt das high-byte im befehl oben
+; 	
+; 		; --- i/o-bereich überspringen ---
+; 		lda sm_rd+2
+; 		cmp #$d0     
+; 		bne chk_end
+; 	
+; 		lda #$d8     
+; 		sta sm_rd+2   
+; 		sta sm_wr+2   
+; 	
+; chk_end 	cmp #$00					; fertig bei überlauf von $ff nach $00
+; 		bne page_lp  
+; 
+; ;		cli						;keep IRQ turned off
+; 		rts
 		
 ;-------------------------------------------------------------------
 ; GenerateRandomDataFromRNG
@@ -4493,57 +4505,72 @@ GenerateRandom1	lda random					; Random Number Generator
 ;
 ;------------------------------------------------------------
 switchMulti	ldx #$0f
-		stx switchDlist3+1
+		stx switchDlist.switchDlist3+1
 		dex
-		stx switchDlist4+1
+		stx switchDlist.switchDlist4+1
 		bne switchDlist
 		
 ;------------------------------------------------------------
 ;
 ;------------------------------------------------------------
 switchMono	ldx #$0e
-		stx switchDlist3+1
+		stx switchDlist.switchDlist3+1
 		inx
-		stx switchDlist4+1
+		stx switchDlist.switchDlist4+1
 		
 ;------------------------------------------------------------
 ;
 ;------------------------------------------------------------
-switchDlist	ldx #dlgfxtop-dl-1
-switchDlist2	lda mathpack,x
+		.proc switchDlist		; Toggle part of the DL between mode $0f (hires) and $0e (multi-color)
+		ldx #dl.dlgfxtop-dl-1
+loop		lda dl_target,x
 		and #$0f
 switchDlist3	cmp #$0e
 		bne switchDlist1
-		lda mathpack,x
+		lda dl_target,x
 		and #$f0
 switchDlist4	ora #$0f
-		sta mathpack,x
+		sta dl_target,x
 switchDlist1	inx
-		cpx #dldebug-dl
-		bne switchDlist2
+		cpx #dl.debug-dl
+		bne loop
 		rts
+		.endp
 ;------------------------------------------------------------
 ;
 ;------------------------------------------------------------
 
+		.proc initSystem
+		sei
+		lda #0
+		sta irqen
+		sta nmien
+wait		ldx vcount
+		bne wait
+ 		sta dmactl
+ 		mva #$fe portb
+		rts
+		.endp
+
 ;------------------------------------------------------------
 ;
 ;------------------------------------------------------------
-initdlist	lda #>(player0data-4)				;player data at $cc00
+		.proc initDlist
+
+		lda #>(player0data-4)				;player data at $cc00
 		sta pmbase
 		
 		ldx #$ff
 		stx sizep0
 		stx sizep1
-		
-		inx						; x=0
-		stx dmactl
-copydlist	lda dl,x
+
+
+copyLoop	lda dl,x
 		sta mathpack,x
 		lda dl+$100,x
 		sta mathpack+$100,x
 		dex
-		bne copydlist
+		bne copyLoop
 
 		stx sizep2
 		stx sizep3
@@ -4555,15 +4582,9 @@ copydlist	lda dl,x
 		stx gractl
 		stx prior
 		
-		lda #<dliproc 
-		sta nmivkt
-		lda #>dliproc 
-		sta nmivkt+1
+		mwa #dliproc nmivkt
 
-		lda #<mathpack
-		sta dlistl
-		lda #>mathpack
-		sta dlistl+1
+		mwa #mathpack dlistl
 		
 		lda #20						;first column equals player pos
 		sta hposp0
@@ -4582,6 +4603,8 @@ copydlist	lda dl,x
 		lda #128					;allow only DLI
 		sta nmien
 		rts
+		.endp
+
 ;------------------------------------------------------------
 ;
 ;------------------------------------------------------------
@@ -4823,7 +4846,7 @@ char2title	lda #EGO_CMD_CHAR_TO_VIDEO
 		sty EGO_REG_DATA				;scroll 0
 		sty EGO_REG_DATA				;no col38
 		
-		jmp waitstatus
+		jmp egoram.waitForCommand
 		
 ;------------------------------------------------------------
 ;
@@ -4864,10 +4887,7 @@ char2gfx	lda #EGO_CMD_CHAR_TO_VIDEO
 		sta EGO_REG_DATA				;scroll
 		lda #0
 		sta EGO_REG_DATA				;col38 = false
-		
-waitstatus	lda EGO_REG_STATUS
-		bmi waitstatus
-		rts
+		jmp egoram.waitForCommand
 
 ;------------------------------------------------------------
 ; draw dreadnaught
@@ -5521,9 +5541,11 @@ titleLineHi	.byte >(titlechars+0*40),>(titlechars+1*40),>(titlechars+2*40),>(tit
 		icl "EgoUridium-GameData.asm"
 		icl "EgoUridium-LevelData.asm"
 
+
+		.local dl
 dc		= $0e
 
-dl		.byte $70,$70
+		.byte $70,$70
 		.byte $40+$0f
 		.word titlegfx
 :22		.byte $0f
@@ -5547,11 +5569,11 @@ dlgfxtop	.byte $40+dc
 :14		.byte dc		
 		.byte dc+$80
 		
-dldebug		.byte $40+$02
-text:		.word debugScreen
+debug		.byte $40+$02
+text		.word debugScreen
 		.byte 2
-		.byte $41
-		.word mathpack
+		.byte $41, a(dl_target)
+		.endl
 
 gfxtop		= $da00
 gfxbottom	= gfxtop + $280

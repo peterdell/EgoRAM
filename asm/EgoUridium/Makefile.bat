@@ -32,7 +32,7 @@ if ERRORLEVEL 1 goto :mads_error
 
 echo Compiling main.
 set EXECUTABLE=atr\files\EUMAIN.XEX
-%MADS% -s EgoUridium.asm -l  -o:%EXECUTABLE%
+%MADS% -s EgoUridium.asm -l -d:EGO_RAM_PRESENT=1 -o:%EXECUTABLE%
 if ERRORLEVEL 1 goto :mads_error
 
 goto :eof

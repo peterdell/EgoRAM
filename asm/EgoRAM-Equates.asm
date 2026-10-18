@@ -1,3 +1,5 @@
+
+
 EGO_REG_CMD		= $d500
 EGO_REG_STATUS		= $d501
 EGO_REG_DATA		= $d502
