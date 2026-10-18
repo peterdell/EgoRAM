@@ -35,8 +35,8 @@ eol		= $9b
 		
 		.proc main
 
-		lda #EGO_DEVICE_GRAPHICS	;debug device is default after reset
-		sta EGO_REG_DEVICE
+		lda #ego_device.GRAPHICS	;debug device is default after reset
+		sta ego_reg.DEVICE
 
 		jsr getOutch
 		jsr convert
@@ -128,9 +128,9 @@ uploadSurfaceCharset
 uploadCharset	sta ptr
 		stx ptr+1
 		
-		lda #EGO_CMD_CHARSET		
-		sta EGO_REG_CMD				;upload charset
-		sty EGO_REG_DATA			;charset no 0 of 1
+		lda #ego_gfx_cmd.CHARSET		
+		sta ego_reg.CMD				;upload charset
+		sty ego_reg.DATA			;charset no 0 of 1
 
 uploadCharset1	lda ptr+1
 		jsr puthex
@@ -140,10 +140,10 @@ uploadCharset1	lda ptr+1
 		
 		ldx #4					;upload 1k;
 		ldy #0
-uploadCharset2	mva (ptr),y+ EGO_REG_DATA
-		mva (ptr),y+ EGO_REG_DATA
-		mva (ptr),y+ EGO_REG_DATA
-		mva (ptr),y+ EGO_REG_DATA
+uploadCharset2	mva (ptr),y+ ego_reg.DATA
+		mva (ptr),y+ ego_reg.DATA
+		mva (ptr),y+ ego_reg.DATA
+		mva (ptr),y+ ego_reg.DATA
 		bne uploadCharset2
 		inc ptr+1
 		dex
@@ -197,18 +197,18 @@ uploadSprites1	txa
 ;------------------------------------------------------------		
 		.proc uploadSprite
 		ldy #0
-		lda #EGO_CMD_SHAPE_DATA
-		sta EGO_REG_CMD
-		stx EGO_REG_DATA				;shape no
+		lda #ego_gfx_cmd.SHAPE_DATA
+		sta ego_reg.CMD
+		stx ego_reg.DATA				;shape no
 		lda #3		
-		sta EGO_REG_DATA				;shape x bytes
+		sta ego_reg.DATA				;shape x bytes
 		lda #21				
-		sta EGO_REG_DATA				;shape y lines
+		sta ego_reg.DATA				;shape y lines
 		lda #2				
-		sta EGO_REG_DATA				;shape bpp
-loop		mva (ptr),y+ EGO_REG_DATA
-		mva (ptr),y+ EGO_REG_DATA
-		mva (ptr),y+ EGO_REG_DATA
+		sta ego_reg.DATA				;shape bpp
+loop		mva (ptr),y+ ego_reg.DATA
+		mva (ptr),y+ ego_reg.DATA
+		mva (ptr),y+ ego_reg.DATA
 		cpy #63
 		bne loop
 		rts

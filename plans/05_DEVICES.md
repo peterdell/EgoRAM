@@ -38,9 +38,10 @@ device lives in `ego_gfx.c`/`ego_gfx.h`:
   instance, the wire-format parameter structs, the command handlers,
   the sprite/blit engine and the command table. Names stay short
   (`cmd_set_char`, `sprite_draw`, `commands[]`).
-- `ego_gfx.h` exposes the device's wire protocol (`EgoCmd`,
-  `EgoSpriteMode`, synced per 01_RULES.md), the descriptor
-  `gfx_device`, `gfx_init()`, the blit accessors and `test()`.
+- A device's header exposes only its descriptor (plus, for graphics,
+  `gfx_print_debug()` and `test()`). The command enum lives in the .c
+  file, uniformly named `EgoCmd` in every device, synced with the
+  equates file per 01_RULES.md.
 - `EgoRAM.h` is the core contract: registers, devices, parser phases
   and the d5xx/log services. `ego_device.h` holds everything a device
   implementation needs: `EGO_CMD_INIT`, `EGO_PARAMS_MAX`, `EGO_PACKED`,
@@ -71,5 +72,7 @@ state to the log output, today by calling `gfx_print_debug()`. A client
 that talks to the cartridge without selecting its device first hits the
 harmless debug device instead of triggering graphics operations. This
 settled the numbering question:
-command values restart per device (`EgoGfxCmd`, `EgoDebugCmd`), since
-the selector disambiguates; names stay unique across devices.
+command values restart per device, since the selector disambiguates.
+The command enums are private to the device compile units (uniformly
+named `EgoCmd`) and scoped MADS enums like `ego_gfx_cmd` in the equates
+file, so names only need to be unique within a device.

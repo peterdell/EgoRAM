@@ -8,7 +8,8 @@
 
 // Every device's command 0 is Init: it resets the device to its power-on
 // state. The core sends it to all devices at startup. The value is part of
-// the wire protocol and must match asm/EgoRAM-Equates.asm.
+// the wire protocol; every device enum in asm/EgoRAM-Equates.asm starts with
+// the member INIT = 0.
 #define EGO_CMD_INIT 0
 
 // Maximum fixed parameter bytes of a command; devices assert that their

@@ -1,53 +1,71 @@
 
 
-EGO_REG_CMD		= $d500
-EGO_REG_STATUS		= $d501
-EGO_REG_DATA		= $d502
-EGO_REG_DEVICE		= $d503	;device selector (EGO_DEVICE_*)
+;Registers within $D5xx
+	.enum ego_reg
+	CMD = $d500
+	STATUS
+	DATA
+	DEVICE			;device selector (ego_device)
+	.ende
 
 EGO_MEM_SCREEN		= $d540	;$20/$28/$30 bytes of screen memory for LMS
 EGO_MEM_CHARSET		= $d580	;8 byte of chararacter $30 when CHBAS is at $d400
 
-EGO_DEVICE_DEBUG	= 0	;active after reset
-EGO_DEVICE_GRAPHICS	= 1
-EGO_DEVICE_MOS6502	= 2
+;Devices, selected by writing the device number to ego_reg.DEVICE
+	.enum ego_device
+	DEBUG			;active after reset
+	GRAPHICS
+	MOS6502
+	.ende
 
-;Commands of all devices
-EGO_CMD_INIT		= 0	;reset device to power-on state
+;Commands are scoped per device (e.g. "lda #ego_gfx_cmd.RENDER_SPRITES").
+;Every device's first command is INIT = 0: reset device to power-on state.
 
-;Commands of EGO_DEVICE_DEBUG
-EGO_CMD_DEBUG	 	= 1	;print debug state to log output
+;Commands of ego_device.DEBUG
+	.enum ego_debug_cmd
+	INIT
+	DEBUG			;print debug state to log output
+	.ende
 
-;Commands of EGO_DEVICE_GRAPHICS
-EGO_CMD_RENDER_SPRITES	= 1
-EGO_CMD_SET_WRITEABLE	= 2
-EGO_CMD_SET_READONLY	= 3
-EGO_CMD_ABORT		= 4
-EGO_CMD_SHAPE_DATA	= 5
-EGO_CMD_DEL_SHAPE	= 6
-EGO_CMD_SPRITE_DATA	= 7
-EGO_CMD_DEL_SPRITE	= 8
-EGO_CMD_ENA_SPRITE	= 9
-EGO_CMD_DIS_SPRITE	= 10
-EGO_CMD_SET_SPRITE_X	= 11
-EGO_CMD_SET_SPRITE_Y	= 12
-EGO_CMD_SET_SPRITE_XY	= 13
-EGO_CMD_SET_BLIT_WIDTH	= 14
-EGO_CMD_SET_BLIT_HEIGHT	= 15
-EGO_CMD_LINE_PTR	= 16
-EGO_CMD_FILL_MEM	= 17
-EGO_CMD_SPRITE_MODE	= 18
-EGO_CMD_CHARSET		= 19	; TODO: SET_CHARSET
-EGO_CMD_CHAR_TO_VIDEO	= 20
-EGO_CMD_SET_CHAR	= 21	; Update 8 bytes for single characters
-EGO_CMD_GET_CHAR	= 22	; Get 8 bytes for single character
+;Commands of ego_device.GRAPHICS
+	.enum ego_gfx_cmd
+	INIT
+	RENDER_SPRITES
+	SET_WRITEABLE
+	SET_READONLY
+	ABORT
+	SHAPE_DATA
+	DEL_SHAPE
+	SPRITE_DATA
+	DEL_SPRITE
+	ENA_SPRITE
+	DIS_SPRITE
+	SET_SPRITE_X
+	SET_SPRITE_Y
+	SET_SPRITE_XY
+	SET_BLIT_WIDTH
+	SET_BLIT_HEIGHT
+	LINE_PTR
+	FILL_MEM
+	SPRITE_MODE
+	CHARSET			;TODO: SET_CHARSET
+	CHAR_TO_VIDEO
+	SET_CHAR		;update 8 bytes for single character
+	GET_CHAR		;get 8 bytes for single character
+	.ende
 
-;Commands of EGO_DEVICE_MOS6502
-EGO_CMD_SET_MEMORY	= 1	;addr lo/hi, length lo/hi + length data bytes
-EGO_CMD_GET_MEMORY	= 2	;addr lo/hi, length lo/hi -> length data bytes
-EGO_CMD_EXECUTE		= 3	;cycles lo/hi, runs at least that many cycles
+;Commands of ego_device.MOS6502
+	.enum ego_mos6502_cmd
+	INIT
+	SET_MEMORY		;addr lo/hi, length lo/hi + length data bytes
+	GET_MEMORY		;addr lo/hi, length lo/hi -> length data bytes
+	EXECUTE			;cycles lo/hi, runs at least that many cycles
+	.ende
 
-EGO_MODE_XOR 		= 0
-EGO_MODE_MASK		= 1
-EGO_MODE_SPECIAL	= 2
+;Sprite blit modes of the graphics device (ego_gfx_cmd.SPRITE_MODE)
+	.enum ego_sprite_mode
+	XOR
+	MASK
+	SPECIAL
+	.ende
 

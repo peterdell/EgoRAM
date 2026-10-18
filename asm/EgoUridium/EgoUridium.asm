@@ -299,16 +299,16 @@ startOfSurfaceDataForCurrentLevel = dreadnaught + $2040
 
 surfaceTextureCharacterSet = $CAFE				;to do!!!
 
-intCharset		= $cc00
-normCharset		= $e000
-player0data		= intCharset
+player0data		= $cc00
 player1data		= player0data+$100
 player2data		= player1data+$100
 player3data		= player2data+$100
 
 
-titlechars		= dreadnaught-4*40
-titlegfx		= titlechars-4*8*40
+title_lines	= 4	;char lines
+title_width	= 40
+titlechars		= dreadnaught-title_lines*title_width
+titlegfx		= titlechars-title_lines*8*title_width
 
 gfxmem			= $8010
 
@@ -322,6 +322,23 @@ nmivkt			= $fffa
 
 explosion_major46	= 46
 
+	org $400
+	
+	.local char_dl
+	.byte $70,$70
+	.byte $42,a(titlechars)
+	.byte $02
+	.byte $02+$80
+	.byte $02+$80
+
+:19	.byte $04
+	.byte $04+$80
+
+	.byte $02
+	.byte $02
+	.byte $41,a(char_dl)
+	.endl
+	
 ;------------------------------------------------------------
 ;
 ;------------------------------------------------------------
@@ -592,9 +609,13 @@ SpinningShipAnimationLoop
 	lda #0
 	sta dbgpos
 	
-	lda #EGO_CMD_DEBUG
-	sta EGO_REG_CMD
-	
+	lda #ego_device.DEBUG
+	sta ego_reg.DEVICE
+	lda #ego_debug_cmd.DEBUG
+	sta ego_reg.CMD
+	lda #ego_device.GRAPHICS
+	sta ego_reg.DEVICE
+
         JSR CheckInputMaybeUpdateDecal
         LDA firePressed
         BEQ SpinningShipAnimationOver
@@ -2211,16 +2232,19 @@ SkipToNextBullet
 ;-------------------------------------------------------------------
 ; download char
 ;-------------------------------------------------------------------
-downloadChar	lda #EGO_CMD_GET_CHAR
-		sta EGO_REG_CMD
+downloadChar	lda #ego_gfx_cmd.GET_CHAR
+		sta ego_reg.CMD
 		ldy currentLevel
 		lda levelSurfaceDataHiPtrArray,y
-		sta EGO_REG_DATA				;charset number
+		sta ego_reg.DATA				;charset number
 		lda charBehindPlayerBulletArray,x
-		sta EGO_REG_DATA				;character number
-		
+		sta ego_reg.DATA				;character number
+
+waitchar	lda ego_reg.STATUS				;wait until GET_CHAR is processed
+		bmi waitchar
+
 		ldy #0
-getchar		lda EGO_REG_DATA
+getchar		lda ego_reg.DATA
 		sta charData,y
 		iny
 		cpy #8
@@ -2231,18 +2255,18 @@ getchar		lda EGO_REG_DATA
 ;-------------------------------------------------------------------
 ; upload char in x
 ;-------------------------------------------------------------------
-uploadChar	lda #EGO_CMD_SET_CHAR
-		sta EGO_REG_CMD
+uploadChar	lda #ego_gfx_cmd.SET_CHAR
+		sta ego_reg.CMD
 		ldy currentLevel
 		lda levelSurfaceDataHiPtrArray,y
-		sta EGO_REG_DATA				;charset number
+		sta ego_reg.DATA				;charset number
 		txa
 		ora bulletSurfaceMask
-		sta EGO_REG_DATA				;character number
+		sta ego_reg.DATA				;character number
 		
 		ldy #0
 uploadChar1	lda charData,y
-		sta EGO_REG_DATA
+		sta ego_reg.DATA
 		iny
 		cpy #8
 		bne uploadChar1
@@ -3744,20 +3768,20 @@ checkShaftEx	rts
 ;		lda bulletCharY,x
 ;		sta temp
 ;
-;		lda #EGO_CMD_SET_CHAR
-;		sta EGO_REG_CMD
+;		lda #ego_gfx_cmd.SET_CHAR
+;		sta ego_reg.CMD
 ;		lda #1
-;		sta EGO_REG_DATA
-;		stx EGO_REG_DATA
+;		sta ego_reg.DATA
+;		stx ego_reg.DATA
 ;uploadChar1	cpy temp
 ;		bne uploadChar2
 ;		lda #$ff
-;		sta EGO_REG_DATA
+;		sta ego_reg.DATA
 ;		iny
 ;		lda #$aa
 ;		bne uploadChar3
 ;uploadChar2	lda (ptr),y
-;uploadChar3	sta EGO_REG_DATA
+;uploadChar3	sta ego_reg.DATA
 ;		iny
 ;		cpy #8
 ;		bcc uploadChar1
@@ -4165,35 +4189,35 @@ keyboardEx	rts
 ; renderSprites
 ;------------------------------------------------------------
 renderSprites	ldx #7
-renderSprites3	ldy #EGO_CMD_DIS_SPRITE				;enable or disable sprite
+renderSprites3	ldy #ego_gfx_cmd.DIS_SPRITE				;enable or disable sprite
 		lda msbForSpriteArray,x
 		and vic_d015
 		beq renderSprites1
-		ldy #EGO_CMD_ENA_SPRITE
-renderSprites1	sty EGO_REG_CMD
-		stx EGO_REG_DATA
+		ldy #ego_gfx_cmd.ENA_SPRITE
+renderSprites1	sty ego_reg.CMD
+		stx ego_reg.DATA
 		tay
 		beq renderSprites2
 
-		lda #EGO_CMD_SPRITE_DATA			;associate sprite with shape
-		sta EGO_REG_CMD
-		stx EGO_REG_DATA				;sprite no
+		lda #ego_gfx_cmd.SPRITE_DATA			;associate sprite with shape
+		sta ego_reg.CMD
+		stx ego_reg.DATA				;sprite no
 		lda sprite0Ptr,x
-		sta EGO_REG_DATA				;shape no
+		sta ego_reg.DATA				;shape no
 		
-		lda #EGO_CMD_SPRITE_MODE			;set sprite mode
-		sta EGO_REG_CMD
-		stx EGO_REG_DATA				;sprite no
+		lda #ego_gfx_cmd.SPRITE_MODE			;set sprite mode
+		sta ego_reg.CMD
+		stx ego_reg.DATA				;sprite no
 		lda spriteModus,x
-		sta EGO_REG_DATA
+		sta ego_reg.DATA
 
 		txa
 		asl
 		tay						;Y = X * 2
 		
-		lda #EGO_CMD_SET_SPRITE_XY			;set sprite XY-pos
-		sta EGO_REG_CMD
-		stx EGO_REG_DATA				;sprite no
+		lda #ego_gfx_cmd.SET_SPRITE_XY			;set sprite XY-pos
+		sta ego_reg.CMD
+		stx ego_reg.DATA				;sprite no
 		
 		clc
 		lda msbForSpriteArray,x
@@ -4202,19 +4226,19 @@ renderSprites1	sty EGO_REG_CMD
 		sec
 renderSprites4	lda vic_d000,y					;sprite X pos
 		ror						;div by 2
-		sta EGO_REG_DATA
+		sta ego_reg.DATA
 		lda #0
-		sta EGO_REG_DATA
+		sta ego_reg.DATA
 		lda vic_d001,y					;sprite Y pos
-		sta EGO_REG_DATA
+		sta ego_reg.DATA
 		lda #0
-		sta EGO_REG_DATA
+		sta ego_reg.DATA
 		
 renderSprites2	dex
 		bpl renderSprites3
 
-		lda #EGO_CMD_RENDER_SPRITES
-		sta EGO_REG_CMD
+		lda #ego_gfx_cmd.RENDER_SPRITES
+		sta ego_reg.CMD
 
 		jmp egoram.waitForCommand
 
@@ -4431,7 +4455,7 @@ filltitle:	lda #$30					;clear title screen and debug lines
 		lda #0
 		sta debugScreen,x
 		inx
-		cpx #160
+		cpx #4*40
 		bne filltitle
 
 		ldx #1
@@ -4564,11 +4588,11 @@ wait		ldx vcount
 		stx sizep0
 		stx sizep1
 
-
+		ldx #0
 copyLoop	lda dl,x
-		sta mathpack,x
+		sta dl_target,x
 		lda dl+$100,x
-		sta mathpack+$100,x
+		sta dl_target+$100,x
 		dex
 		bne copyLoop
 
@@ -4584,7 +4608,11 @@ copyLoop	lda dl,x
 		
 		mwa #dliproc nmivkt
 
-		mwa #mathpack dlistl
+		.if EGO_RAM_PRESENT = 1
+		mwa #dl_target dlistl
+		.else
+		mwa #char_dl dlistl
+		.endif
 		
 		lda #20						;first column equals player pos
 		sta hposp0
@@ -4615,15 +4643,17 @@ waitvcnt	cmp vcount
 ;------------------------------------------------------------
 ; set line addresses and blitwidth/heigt (40 / 136)
 ;------------------------------------------------------------
-setScreenLines	lda #EGO_CMD_SET_BLIT_WIDTH	
-		sta EGO_REG_CMD
+setScreenLines	lda #ego_device.GRAPHICS	;debug device is default after reset
+		sta ego_reg.DEVICE
+		lda #ego_gfx_cmd.SET_BLIT_WIDTH
+		sta ego_reg.CMD
 		lda #40						;BLITWIDTH
-		sta EGO_REG_DATA
+		sta ego_reg.DATA
 		
-		lda #EGO_CMD_SET_BLIT_HEIGHT
-		sta EGO_REG_CMD
-		lda #136			
-		sta EGO_REG_DATA
+		lda #ego_gfx_cmd.SET_BLIT_HEIGHT
+		sta ego_reg.CMD
+		lda #136		
+		sta ego_reg.DATA
 
 
 		lda #<gfxmem
@@ -4631,18 +4661,18 @@ setScreenLines	lda #EGO_CMD_SET_BLIT_WIDTH
 		lda #>gfxmem
 		sta ptr+1
 		
-		lda #EGO_CMD_ABORT
-		sta EGO_REG_CMD
+		lda #ego_gfx_cmd.ABORT
+		sta ego_reg.CMD
 		
-		lda #EGO_CMD_LINE_PTR
-		sta EGO_REG_CMD
+		lda #ego_gfx_cmd.LINE_PTR
+		sta ego_reg.CMD
 		ldx #136
-		stx EGO_REG_DATA
+		stx ego_reg.DATA
 		
 setScreenLines1	lda ptr
-		sta EGO_REG_DATA
+		sta ego_reg.DATA
 		lda ptr+1
-		sta EGO_REG_DATA
+		sta ego_reg.DATA
 		
 		clc
 		lda ptr
@@ -4798,17 +4828,17 @@ addPtr64a	rts
 ;
 ;------------------------------------------------------------		
 uploadSprite	ldy #0
-		lda #EGO_CMD_SHAPE_DATA
-		sta EGO_REG_CMD
-		stx EGO_REG_DATA				;shape no
+		lda #ego_gfx_cmd.SHAPE_DATA
+		sta ego_reg.CMD
+		stx ego_reg.DATA				;shape no
 		lda #3		
-		sta EGO_REG_DATA				;shape x bytes
+		sta ego_reg.DATA				;shape x bytes
 		lda #21				
-		sta EGO_REG_DATA				;shape y lines
+		sta ego_reg.DATA				;shape y lines
 		lda #2				
-		sta EGO_REG_DATA				;shape bpp
+		sta ego_reg.DATA				;shape bpp
 uploadSprite1	lda (ptr),y
-		sta EGO_REG_DATA
+		sta ego_reg.DATA
 		iny
 		cpy #63
 		bne uploadSprite1
@@ -4817,76 +4847,76 @@ uploadSprite1	lda (ptr),y
 ;------------------------------------------------------------
 ;
 ;------------------------------------------------------------
-char2title	lda #EGO_CMD_CHAR_TO_VIDEO
-		sta EGO_REG_CMD
+char2title	lda #ego_gfx_cmd.CHAR_TO_VIDEO
+		sta ego_reg.CMD
 		
 		lda #<titlechars
-		sta EGO_REG_DATA
+		sta ego_reg.DATA
 		lda #>titlechars
-		sta EGO_REG_DATA
+		sta ego_reg.DATA
 
-		ldx #40
-		stx EGO_REG_DATA				;src inc
-		ldy #0
-		sty EGO_REG_DATA
+		ldx #<title_width
+		ldy #>title_width
+		stx ego_reg.DATA				;src inc
+		sty ego_reg.DATA
 		
 		lda #<titlegfx
-		sta EGO_REG_DATA
+		sta ego_reg.DATA
 		lda #>titlegfx
-		sta EGO_REG_DATA
+		sta ego_reg.DATA
 		
-		stx EGO_REG_DATA				;dest inc
-		sty EGO_REG_DATA
+		stx ego_reg.DATA				;dest inc
+		sty ego_reg.DATA
 		
-		stx EGO_REG_DATA				;width
-		lda #4
-		sta EGO_REG_DATA				;height
+		stx ego_reg.DATA				;width
+		lda #title_lines
+		sta ego_reg.DATA				;height
 		
-		sty EGO_REG_DATA				;charset 0
-		sty EGO_REG_DATA				;scroll 0
-		sty EGO_REG_DATA				;no col38
+		sty ego_reg.DATA				;charset 0
+		sty ego_reg.DATA				;scroll 0
+		sty ego_reg.DATA				;no col38
 		
 		jmp egoram.waitForCommand
 		
 ;------------------------------------------------------------
 ;
 ;------------------------------------------------------------
-char2gfx	lda #EGO_CMD_CHAR_TO_VIDEO
-		sta EGO_REG_CMD
+char2gfx	lda #ego_gfx_cmd.CHAR_TO_VIDEO
+		sta ego_reg.CMD
 
 		lda scrollPositionLoPtr
-		sta EGO_REG_DATA
+		sta ego_reg.DATA
 		lda scrollPositionHiPtr
-		sta EGO_REG_DATA
+		sta ego_reg.DATA
 
 		lda srcWidthLo
-		sta EGO_REG_DATA				;src inc
+		sta ego_reg.DATA				;src inc
 		lda srcWidthHi
-		sta EGO_REG_DATA
+		sta ego_reg.DATA
 		
 		lda #<gfxmem
-		sta EGO_REG_DATA
+		sta ego_reg.DATA
 		lda #>gfxmem
-		sta EGO_REG_DATA
+		sta ego_reg.DATA
 	
 		ldy #40
-		sty EGO_REG_DATA				;dest inc (40)
+		sty ego_reg.DATA				;dest inc (40)
 		lda #0
-		sta EGO_REG_DATA
+		sta ego_reg.DATA
 
-		sty EGO_REG_DATA				;width
+		sty ego_reg.DATA				;width
 		lda #17
-		sta EGO_REG_DATA				;height
+		sta ego_reg.DATA				;height
 		
 		ldy currentLevel
 		lda levelSurfaceDataHiPtrArray,y
-		sta EGO_REG_DATA				;charset 0
+		sta ego_reg.DATA				;charset 0
 		
 		lda pixelsToScroll
 		and #$7e
-		sta EGO_REG_DATA				;scroll
+		sta ego_reg.DATA				;scroll
 		lda #0
-		sta EGO_REG_DATA				;col38 = false
+		sta ego_reg.DATA				;col38 = false
 		jmp egoram.waitForCommand
 
 ;------------------------------------------------------------

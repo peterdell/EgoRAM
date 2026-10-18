@@ -17,7 +17,8 @@ typedef enum : uint8_t {
 #define EGO_UART_RX_PIN 29
 
 // Register offsets within $D5xx. The values are part of the wire protocol
-// and must match asm/EgoRAM-Equates.asm.
+// and must match the scoped enum ego_reg in asm/EgoRAM-Equates.asm, which
+// holds the absolute $D5xx addresses.
 typedef enum : uint8_t {
     EGO_REG_CMD,
     EGO_REG_STATUS,
@@ -30,8 +31,8 @@ _Static_assert(EGO_REG_DEVICE == 3, "EgoReg values must match asm/EgoRAM-Equates
 // Devices inside the cartridge, selected by writing the device number to
 // EGO_REG_DEVICE. The debug device is device 0 and active after reset, so
 // clients select their device first. The values are part of the wire protocol
-// and must match asm/EgoRAM-Equates.asm, so only append new devices at the
-// end.
+// and must match the scoped enum ego_device in asm/EgoRAM-Equates.asm, so
+// only append new devices at the end.
 typedef enum : uint8_t {
     EGO_DEVICE_DEBUG,
     EGO_DEVICE_GRAPHICS,
