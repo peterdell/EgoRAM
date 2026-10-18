@@ -8,9 +8,16 @@ EGO_REG_DEVICE		= $d503	;device selector (EGO_DEVICE_*)
 EGO_MEM_SCREEN		= $d540	;$20/$28/$30 bytes of screen memory for LMS
 EGO_MEM_CHARSET		= $d580	;8 byte of chararacter $30 when CHBAS is at $d400
 
-EGO_DEVICE_GRAPHICS	= 0	;active after reset
+EGO_DEVICE_DEBUG	= 0	;active after reset
+EGO_DEVICE_GRAPHICS	= 1
 
-EGO_CMD_INIT		= 0	;every device: reset device to power-on state
+;Commands of all devices
+EGO_CMD_INIT		= 0	;reset device to power-on state
+
+;Commands of EGO_DEVICE_DEBUG
+EGO_CMD_DEBUG	 	= 1	;print debug state to log output
+
+;Commands of EGO_DEVICE_GRAPHICS
 EGO_CMD_RENDER_SPRITES	= 1
 EGO_CMD_SET_WRITEABLE	= 2
 EGO_CMD_SET_READONLY	= 3
@@ -33,8 +40,6 @@ EGO_CMD_CHARSET		= 19	; TODO: SET_CHARSET
 EGO_CMD_CHAR_TO_VIDEO	= 20
 EGO_CMD_SET_CHAR	= 21	; Update 8 bytes for single characters
 EGO_CMD_GET_CHAR	= 22	; Get 8 bytes for single character
-
-EGO_CMD_DEBUG	 	= 99
 
 EGO_MODE_XOR 		= 0
 EGO_MODE_MASK		= 1

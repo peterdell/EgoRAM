@@ -472,7 +472,7 @@ static void RAM_FUNC char_to_video(ego_cmd_char_to_video_params_t params) {
     }
 }
 
-static void print_debug() {
+void gfx_print_debug(void) {
     sprite_t *sp;
     int i;
 
@@ -658,10 +658,6 @@ static void RAM_FUNC cmd_get_char(const uint8_t *p) {
     stream_out(&ego_gfx.charsets[params->charset_no][params->char_no << 3], 8);
 }
 
-static void RAM_FUNC cmd_debug(const uint8_t *p) {
-    print_debug();
-}
-
 #pragma endregion
 
 // Explicitly placed in RAM so that command dispatch never stalls on flash XIP.
@@ -687,7 +683,6 @@ static const ego_cmd_desc_t __not_in_flash("gfx_commands") commands[] = {
     [EGO_CMD_CHAR_TO_VIDEO] = {sizeof(ego_cmd_char_to_video_params_t), cmd_char_to_video},
     [EGO_CMD_SET_CHAR] = {sizeof(ego_cmd_set_char_params_t), cmd_set_char},
     [EGO_CMD_GET_CHAR] = {sizeof(ego_cmd_get_char_params_t), cmd_get_char},
-    [EGO_CMD_DEBUG] = {0, cmd_debug},
 };
 
 const ego_device_desc_t __not_in_flash("gfx_device") gfx_device = {
@@ -716,6 +711,9 @@ void test() {
 
     int x, y, c;
     uint16_t ptr = 0;
+
+    // The debug device is the default after start.
+    write_d5xx(EGO_REG_DEVICE, EGO_DEVICE_GRAPHICS);
 
     write_d5xx(EGO_REG_CMD, EGO_CMD_SET_BLIT_WIDTH);
     write_d5xx(EGO_REG_DATA, (uint8_t)width);

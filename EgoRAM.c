@@ -44,6 +44,7 @@ S5      1   gpio 25
 #include "atari_cart.h"
 #include "EgoRAM.h"
 #include "ego_gfx.h"
+#include "ego_debug.h"
 #include "cvideo.h"
 
 char c;
@@ -56,7 +57,7 @@ static volatile uint8_t *cart_d5xx;
 static volatile uint32_t ticks;
 static bool uart_init_once;
 
-static EgoDevice ego_device; // zero-initialized: EGO_DEVICE_GRAPHICS
+static EgoDevice ego_device; // zero-initialized: EGO_DEVICE_DEBUG
 static uint8_t ego_cmd;
 static EgoState ego_state;
 static uint8_t ego_params[EGO_PARAMS_MAX];
@@ -70,6 +71,7 @@ static uint32_t ego_out_len;
 // Devices and their command tables, indexed by EgoDevice. Placed in RAM so
 // that command dispatch never stalls on flash XIP.
 static const ego_device_desc_t *const __not_in_flash("ego_devices") ego_devices[] = {
+    [EGO_DEVICE_DEBUG] = &debug_device,
     [EGO_DEVICE_GRAPHICS] = &gfx_device,
 };
 
@@ -282,7 +284,7 @@ int main() {
         ego_device = device;
         do_command(EGO_CMD_INIT);
     }
-    ego_device = EGO_DEVICE_GRAPHICS;
+    ego_device = EGO_DEVICE_DEBUG; // the default device after start
 
     memset((void *)(get_cart_ram() + 0x2000), 0xaa, 8 * 1024);
 

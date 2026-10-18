@@ -16,7 +16,8 @@ must be the same in both files:
 |-------------------------------------------|--------------------|
 | `EgoReg` (`EGO_REG_*`, EgoRAM.h)          | `EGO_REG_*`        |
 | `EgoDevice` (`EGO_DEVICE_*`, EgoRAM.h)    | `EGO_DEVICE_*`     |
-| `EgoCmd` (`EGO_CMD_*`, ego_gfx.h)         | `EGO_CMD_*`        |
+| `EgoGfxCmd` (`EGO_CMD_*`, ego_gfx.h)      | `EGO_CMD_*`        |
+| `EgoDebugCmd` (`EGO_CMD_DEBUG`, ego_debug.h) | `EGO_CMD_DEBUG` |
 | `EgoSpriteMode` (`EGO_MODE_*`, ego_gfx.h) | `EGO_MODE_*`       |
 
 Rules when changing them:
@@ -27,8 +28,9 @@ Rules when changing them:
   are auto-numbered, so inserting an entry silently renumbers everything
   after it and desynchronizes the Atari side without any error.
 - `EGO_CMD_INIT = 0` is common to all devices and defined in `EgoRAM.h`;
-  device command enums start at 1. `EGO_CMD_DEBUG = 99` keeps its
-  explicit value in both files.
+  device command enums start at 1. Command values are per device, so the
+  same value may appear in several device enums, but each name exists
+  only once.
 - Update both files in the same commit.
 
 The `_Static_assert` pins in `EgoRAM.h` (e.g. `EGO_CMD_GET_CHAR == 21`)

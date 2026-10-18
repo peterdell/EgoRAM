@@ -42,6 +42,7 @@ pico_sdk_init()
 add_executable( EgoRAM
                 EgoRAM.c
                 ego_gfx.c
+                ego_debug.c
                 atari_cart.c
                 cvideo.c
 		)

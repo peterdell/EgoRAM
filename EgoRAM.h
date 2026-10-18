@@ -28,14 +28,16 @@ typedef enum : uint8_t {
 _Static_assert(EGO_REG_DEVICE == 3, "EgoReg values must match asm/EgoRAM-Equates.asm");
 
 // Devices inside the cartridge, selected by writing the device number to
-// EGO_REG_DEVICE. Graphics is device 0 and active after reset. The values are
-// part of the wire protocol and must match asm/EgoRAM-Equates.asm, so only
-// append new devices at the end.
+// EGO_REG_DEVICE. The debug device is device 0 and active after reset, so
+// clients select their device first. The values are part of the wire protocol
+// and must match asm/EgoRAM-Equates.asm, so only append new devices at the
+// end.
 typedef enum : uint8_t {
+    EGO_DEVICE_DEBUG,
     EGO_DEVICE_GRAPHICS
 } EgoDevice;
 
-_Static_assert(EGO_DEVICE_GRAPHICS == 0, "EgoDevice values must match asm/EgoRAM-Equates.asm");
+_Static_assert(EGO_DEVICE_GRAPHICS == 1, "EgoDevice values must match asm/EgoRAM-Equates.asm");
 
 // Phase of the EGO command parser. Each command's fixed parameter bytes are
 // described by the active device's command table; bulk payloads are streamed

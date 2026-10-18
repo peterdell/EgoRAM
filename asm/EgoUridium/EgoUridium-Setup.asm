@@ -35,6 +35,9 @@ eol		= $9b
 		
 		.proc main
 
+		lda #EGO_DEVICE_GRAPHICS	;debug device is default after reset
+		sta EGO_REG_DEVICE
+
 		jsr getOutch
 		jsr convert
 		jsr uploadAllSprites

@@ -17,8 +17,8 @@ with its own command set and state.
   readable, returning the active device.
 - `EgoDevice` enumerates the devices. It is wire protocol, synced with
   asm/EgoRAM-Equates.asm per 01_RULES.md (append-only, pinned with a
-  `_Static_assert`). `EGO_DEVICE_GRAPHICS` is 0 and active after reset,
-  so existing clients that never touch the selector keep working.
+  `_Static_assert`). `EGO_DEVICE_DEBUG` is 0 and active after reset, so
+  every client selects its device before sending commands.
 - A global `ego_device` holds the active device on core 1. Writing the
   selector aborts any command in progress (`ego_state` back to IDLE).
   Commands and data for devices that are not implemented are ignored.
@@ -60,8 +60,14 @@ A new device = one compile unit exporting its `ego_device_desc_t` with
 a `cmd_init` handler at `[EGO_CMD_INIT]`, one `EgoDevice` enum value
 (both files, 01_RULES.md) and one row in `ego_devices[]`.
 
-## Next steps when the second device arrives
+## The debug device (implemented 2026-10-18)
 
-- Decide whether command numbering restarts per device (likely yes,
-  since the selector disambiguates) — document it in 01_RULES.md and
-  the equates file, e.g. `EGO_<device>_CMD_*` blocks.
+`EGO_DEVICE_DEBUG` (0, the default device after reset) in
+`ego_debug.c`/`ego_debug.h` is the template for further devices:
+`EGO_CMD_DEBUG` (1, its first command after Init) prints the firmware
+state to the log output, today by calling `gfx_print_debug()`. A client
+that talks to the cartridge without selecting its device first hits the
+harmless debug device instead of triggering graphics operations. This
+settled the numbering question:
+command values restart per device (`EgoGfxCmd`, `EgoDebugCmd`), since
+the selector disambiguates; names stay unique across devices.
