@@ -127,7 +127,7 @@ void RAM_FUNC emulate_roland() {
                 while (gpio_get_all() & PHI2_GPIO_MASK)
                     ;
                 SET_DATA_MODE_IN;
-                if (addr == EGO_REG_DATA) {
+                if (ram_ptr == cart_d5xx && addr == EGO_REG_DATA) {
                     ram_ptr[addr] = read_d5xx(addr);
                 }
             }

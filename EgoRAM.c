@@ -681,7 +681,11 @@ void RAM_FUNC core1_main() {
             break;
         }
 
-        cart_d5xx[EGO_REG_STATUS] &= ~0x80;
+        // Clear busy only once all queued writes are processed, so the
+        // Atari can rely on it as a "command fully handled" barrier.
+        if (!multicore_fifo_rvalid()) {
+            cart_d5xx[EGO_REG_STATUS] &= ~0x80;
+        }
     }
 }
 
