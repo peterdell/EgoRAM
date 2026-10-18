@@ -122,32 +122,32 @@ static void systick_init(void)
     systick_hw->rvr = 0x00FFFFFF; // Maximaler Reload-Wert (24-Bit)
 }
 
-uint16_t __not_in_flash_func(get_blitwidth)()
+uint16_t RAM_FUNC get_blitwidth()
 {
     return ego_blitwidth;
 }
 
-void __not_in_flash_func(set_blitwidth)(uint16_t width)
+void RAM_FUNC set_blitwidth(uint16_t width)
 {
     ego_blitwidth = width;
 }
 
-uint16_t __not_in_flash_func(get_blitheight)()
+uint16_t RAM_FUNC get_blitheight()
 {
     return ego_blitheight;
 }
 
-void __not_in_flash_func(set_blitheight)(uint16_t height)
+void RAM_FUNC set_blitheight(uint16_t height)
 {
     ego_blitheight = height;
 }
 
-uint8_t __not_in_flash_func(read_vram)(uint16_t addr)
+uint8_t RAM_FUNC read_vram(uint16_t addr)
 {
     return video_ram[addr];
 }
 
-void __not_in_flash_func(write_vram)(uint16_t addr, uint8_t data)
+void RAM_FUNC write_vram(uint16_t addr, uint8_t data)
 {
     if (addr >= 0x1fff)
     {
@@ -159,7 +159,7 @@ void __not_in_flash_func(write_vram)(uint16_t addr, uint8_t data)
     }
 }
 
-void __not_in_flash_func(sprite_draw)(sprite_t *sp)
+void RAM_FUNC sprite_draw(sprite_t *sp)
 {
 
     int xpos = sp->xpos;
@@ -357,7 +357,7 @@ void __not_in_flash_func(sprite_draw)(sprite_t *sp)
     }
 }
 
-void __not_in_flash_func(render_sprites)(void)
+void RAM_FUNC render_sprites(void)
 {
 
     sprite_t *sp;
@@ -414,7 +414,7 @@ void do_movement()
     cart_d5xx[EGO_REG_STATUS] &= ~0x80;
 }
 
-void __not_in_flash_func(char_to_video)()
+void RAM_FUNC char_to_video()
 {
     int i, x, y;
     int vypos;
@@ -467,7 +467,7 @@ void print_debug()
     }
 }
 
-static void __not_in_flash_func(stream_in)(uint8_t *dst, uint32_t len, void (*done)(void))
+static void RAM_FUNC stream_in(uint8_t *dst, uint32_t len, void (*done)(void))
 {
     if (len == 0)
         return;
@@ -477,28 +477,28 @@ static void __not_in_flash_func(stream_in)(uint8_t *dst, uint32_t len, void (*do
     ego_state = EGO_ST_DATA_IN;
 }
 
-static void __not_in_flash_func(cmd_render_sprites)(const uint8_t *p)
+static void RAM_FUNC cmd_render_sprites(const uint8_t *p)
 {
     render_sprites();
 }
 
-static void __not_in_flash_func(cmd_set_writeable)(const uint8_t *p)
+static void RAM_FUNC cmd_set_writeable(const uint8_t *p)
 {
     set_writeable(true);
     cart_d5xx[EGO_REG_STATUS] |= 0x01;
 }
 
-static void __not_in_flash_func(cmd_set_readonly)(const uint8_t *p)
+static void RAM_FUNC cmd_set_readonly(const uint8_t *p)
 {
     set_writeable(false);
     cart_d5xx[EGO_REG_STATUS] &= ~0x01;
 }
 
-static void __not_in_flash_func(cmd_abort)(const uint8_t *p)
+static void RAM_FUNC cmd_abort(const uint8_t *p)
 {
 }
 
-static void __not_in_flash_func(cmd_shape_data)(const uint8_t *p)
+static void RAM_FUNC cmd_shape_data(const uint8_t *p)
 {
     shape_t *shape = &shape_array[p[0]];
 
@@ -518,22 +518,22 @@ static void __not_in_flash_func(cmd_shape_data)(const uint8_t *p)
     stream_in(shape->data, shape->width * shape->height, NULL);
 }
 
-static void __not_in_flash_func(cmd_sprite_data)(const uint8_t *p)
+static void RAM_FUNC cmd_sprite_data(const uint8_t *p)
 {
     sprite_array[p[0]].shape_no = p[1];
 }
 
-static void __not_in_flash_func(cmd_enable_sprite)(const uint8_t *p)
+static void RAM_FUNC cmd_enable_sprite(const uint8_t *p)
 {
     sprite_array[p[0]].enabled = true;
 }
 
-static void __not_in_flash_func(cmd_disable_sprite)(const uint8_t *p)
+static void RAM_FUNC cmd_disable_sprite(const uint8_t *p)
 {
     sprite_array[p[0]].enabled = false;
 }
 
-static void __not_in_flash_func(cmd_set_sprite_x)(const uint8_t *p)
+static void RAM_FUNC cmd_set_sprite_x(const uint8_t *p)
 {
     sprite_t *sprite = &sprite_array[p[0]];
 
@@ -541,7 +541,7 @@ static void __not_in_flash_func(cmd_set_sprite_x)(const uint8_t *p)
     sprite->xpos = p[1] | p[2] << 8;
 }
 
-static void __not_in_flash_func(cmd_set_sprite_y)(const uint8_t *p)
+static void RAM_FUNC cmd_set_sprite_y(const uint8_t *p)
 {
     sprite_t *sprite = &sprite_array[p[0]];
 
@@ -549,7 +549,7 @@ static void __not_in_flash_func(cmd_set_sprite_y)(const uint8_t *p)
     sprite->ypos = p[1] | p[2] << 8;
 }
 
-static void __not_in_flash_func(cmd_set_sprite_xy)(const uint8_t *p)
+static void RAM_FUNC cmd_set_sprite_xy(const uint8_t *p)
 {
     sprite_t *sprite = &sprite_array[p[0]];
 
@@ -559,17 +559,17 @@ static void __not_in_flash_func(cmd_set_sprite_xy)(const uint8_t *p)
     sprite->ypos = p[3] | p[4] << 8;
 }
 
-static void __not_in_flash_func(cmd_set_blit_width)(const uint8_t *p)
+static void RAM_FUNC cmd_set_blit_width(const uint8_t *p)
 {
     ego_blitwidth = p[0];
 }
 
-static void __not_in_flash_func(cmd_set_blit_height)(const uint8_t *p)
+static void RAM_FUNC cmd_set_blit_height(const uint8_t *p)
 {
     ego_blitheight = p[0];
 }
 
-static void __not_in_flash_func(line_ptr_done)(void)
+static void RAM_FUNC line_ptr_done(void)
 {
     for (uint32_t i = 0; i < ego_line_no; i++)
     {
@@ -577,13 +577,13 @@ static void __not_in_flash_func(line_ptr_done)(void)
     }
 }
 
-static void __not_in_flash_func(cmd_line_ptr)(const uint8_t *p)
+static void RAM_FUNC cmd_line_ptr(const uint8_t *p)
 {
     ego_line_no = p[0];
     stream_in(ego_line_staging, ego_line_no * 2, line_ptr_done);
 }
 
-static void __not_in_flash_func(cmd_fill_mem)(const uint8_t *p)
+static void RAM_FUNC cmd_fill_mem(const uint8_t *p)
 {
     uint16_t addr = p[0] | (p[1] & 0x3f) << 8;
     uint16_t len = p[2] | p[3] << 8;
@@ -595,12 +595,12 @@ static void __not_in_flash_func(cmd_fill_mem)(const uint8_t *p)
     memset((void *)&video_ram[addr], p[4], len);
 }
 
-static void __not_in_flash_func(cmd_sprite_mode)(const uint8_t *p)
+static void RAM_FUNC cmd_sprite_mode(const uint8_t *p)
 {
     sprite_array[p[0]].mode = p[1];
 }
 
-static void __not_in_flash_func(cmd_charset)(const uint8_t *p)
+static void RAM_FUNC cmd_charset(const uint8_t *p)
 {
     ego_charset_no = p[0];
     if (charset_array[ego_charset_no] == NULL)
@@ -610,7 +610,7 @@ static void __not_in_flash_func(cmd_charset)(const uint8_t *p)
     stream_in(charset_array[ego_charset_no], 2048, NULL);
 }
 
-static void __not_in_flash_func(cmd_char_to_video)(const uint8_t *p)
+static void RAM_FUNC cmd_char_to_video(const uint8_t *p)
 {
     ego_src_ptr = p[0] | p[1] << 8;
     ego_src_inc = p[2] | p[3] << 8;
@@ -624,13 +624,13 @@ static void __not_in_flash_func(cmd_char_to_video)(const uint8_t *p)
     char_to_video();
 }
 
-static void __not_in_flash_func(cmd_set_char)(const uint8_t *p)
+static void RAM_FUNC cmd_set_char(const uint8_t *p)
 {
     ego_charset_no = p[0];
     stream_in(&charset_array[ego_charset_no][p[1] << 3], 8, NULL);
 }
 
-static void __not_in_flash_func(cmd_get_char)(const uint8_t *p)
+static void RAM_FUNC cmd_get_char(const uint8_t *p)
 {
     const uint8_t *char_data = &charset_array[p[0]][p[1] << 3];
 
@@ -640,7 +640,7 @@ static void __not_in_flash_func(cmd_get_char)(const uint8_t *p)
     ego_state = EGO_ST_DATA_OUT;
 }
 
-static void __not_in_flash_func(cmd_debug)(const uint8_t *p)
+static void RAM_FUNC cmd_debug(const uint8_t *p)
 {
     print_debug();
 }
@@ -676,7 +676,7 @@ static const ego_cmd_desc_t __not_in_flash("ego_commands") ego_commands[] = {
     [EGO_CMD_DEBUG] = {0, cmd_debug},
 };
 
-void __not_in_flash_func(do_data)(uint8_t data)
+void RAM_FUNC do_data(uint8_t data)
 {
     switch (ego_state)
     {
@@ -704,7 +704,7 @@ void __not_in_flash_func(do_data)(uint8_t data)
     }
 }
 
-void __not_in_flash_func(do_command)(uint8_t data)
+void RAM_FUNC do_command(uint8_t data)
 {
     ego_cmd = data;
     ego_param_idx = 0;
@@ -726,7 +726,7 @@ void __not_in_flash_func(do_command)(uint8_t data)
     }
 }
 
-void __not_in_flash_func(core1_main)()
+void RAM_FUNC core1_main()
 {
     uint32_t msg;
     uint8_t data;
@@ -768,7 +768,7 @@ void __not_in_flash_func(core1_main)()
     }
 }
 
-void __not_in_flash_func(putChar)(int xpos, int ypos, uint8_t c)
+void RAM_FUNC putChar(int xpos, int ypos, uint8_t c)
 {
     // ego_log("%p %02X ", (ypos * ego_blitwidth * 8) + xpos, c);
 
@@ -800,7 +800,7 @@ uint8_t read_d5xx(uint8_t addr)
     return cart_d5xx[addr];
 }
 
-void __not_in_flash_func(write_d5xx)(uint8_t addr, uint8_t data)
+void RAM_FUNC write_d5xx(uint8_t addr, uint8_t data)
 {
     cart_d5xx[EGO_REG_STATUS] |= 0x80;
 
@@ -814,7 +814,7 @@ void __not_in_flash_func(write_d5xx)(uint8_t addr, uint8_t data)
     }
 }
 
-void __not_in_flash_func(ego_log)(const char *format, ...)
+void RAM_FUNC ego_log(const char *format, ...)
 {
 
     va_list args;

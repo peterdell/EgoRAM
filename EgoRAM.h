@@ -1,3 +1,8 @@
+// Places the function in RAM (section ".time_critical.EgoRAM") so it runs
+// at full speed without flash wait states. Requires the pico SDK headers to
+// be included first.
+#define RAM_FUNC __not_in_flash("EgoRAM")
+
 #define EGO_MAX_SPRITES 64
 #define EGO_MAX_SHAPES 256
 

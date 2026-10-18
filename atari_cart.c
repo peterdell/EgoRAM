@@ -61,17 +61,17 @@ static volatile unsigned char cart_ram[16 * 1024];
 static volatile unsigned char cart_d5xx[256];
 static volatile bool writeable = true;
 
-volatile unsigned char *__not_in_flash_func(get_cart_d5xx)()
+volatile unsigned char *RAM_FUNC get_cart_d5xx()
 {
 	return cart_d5xx;
 }
 
-volatile unsigned char *__not_in_flash_func(get_cart_ram)()
+volatile unsigned char *RAM_FUNC get_cart_ram()
 {
 	return cart_ram;
 }
 
-void __not_in_flash_func(emulate_roland)()
+void RAM_FUNC emulate_roland()
 {
 	// 8k
 	RD4_HIGH;
@@ -148,7 +148,7 @@ void set_writeable(bool truefalse)
 
 #define ATARI_PHI2_PIN 22 // used on boot to check if we are plugged into an atari or usb
 
-void __not_in_flash_func(atari_cart_main)()
+void RAM_FUNC atari_cart_main()
 {
 	gpio_init_mask(0x0FFFFFFF);
 
